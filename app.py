@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -13,12 +13,6 @@ def chat():
 
     reply = f"🤖 Ти сказав: {msg}"
 
-    from flask import Response
-import json
-
-return Response(
-    json.dumps({"reply": reply}, ensure_ascii=False),
-    content_type="application/json; charset=utf-8"
-)
+    return reply
 
 app.run(host="0.0.0.0", port=3000)

@@ -2,29 +2,53 @@ from flask import Flask, request
 import os
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "AI bot is running"
+    return "AI bot is running 🎧"
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json
-    msg = data.get("message")
+    try:
+        # отримуємо ключ
+        api_key = os.getenv("OPENAI_API_KEY")
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Ти — веселий AI діджей клубу Дніпро. Спілкуйся живо, з гумором."},
-            {"role": "user", "content": msg}
-        ]
-    )
+        if not api_key:
+            return "ERROR: Missing OPENAI_API_KEY", 500
 
-    reply = response.choices[0].message.content
+        client = OpenAI(api_key=api_key)
 
-    return reply
+        # отримуємо дані з SL
+        data = request.json
+        msg = data.get("message", "")
 
-app.run(host="0.0.0.0", port=3000)
+        if msg.strip() == "":
+            return "ERROR: empty message", 400
+
+        # запит до OpenAI
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Ти веселий DJ клубу Дніпро. Відповідай коротко, енергійно, з гумором і музичним вайбом 🎧"
+                },
+                {
+                    "role": "user",
+                    "content": msg
+                }
+            ]
+        )
+
+        reply = response.choices[0].message.content
+
+        return reply, 200
+
+    except Exception as e:
+        # щоб SL НЕ бачив просто 500 без причини
+        return f"ERROR: {str(e)}", 500
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=3000)

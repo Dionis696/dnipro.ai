@@ -13,6 +13,12 @@ def chat():
 
     reply = f"🤖 Ти сказав: {msg}"
 
-    return jsonify({"reply": reply})
+    from flask import Response
+import json
+
+return Response(
+    json.dumps({"reply": reply}, ensure_ascii=False),
+    content_type="application/json; charset=utf-8"
+)
 
 app.run(host="0.0.0.0", port=3000)

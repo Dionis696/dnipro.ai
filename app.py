@@ -33,7 +33,7 @@ def chat():
             return random.choice(DJ_FALLBACK)
 
         # запит до Gemini
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+       url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         payload = {
             "contents": [
@@ -50,11 +50,14 @@ def chat():
         res = requests.post(url, json=payload)
 
         if res.status_code == 200:
-            result = res.json()
-            reply = result["candidates"][0]["content"]["parts"][0]["text"]
-            return reply
-        else:
-            return random.choice(DJ_FALLBACK)
+    result = res.json()
+    try:
+        reply = result["candidates"][0]["content"]["parts"][0]["text"]
+        return reply
+    except:
+        return "Gemini відповів, але формат дивний 😅"
+else:
+    return f"Gemini error: {res.text}"
 
     except Exception:
         return random.choice(DJ_FALLBACK)

@@ -1,53 +1,63 @@
 from flask import Flask, request
 import os
-from openai import OpenAI
+import requests
+import random
 
 app = Flask(__name__)
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+DJ_FALLBACK = [
+    "Йо! Клуб Дніпро качає 🎧",
+    "Піднімаємо руки! Танцпол горить 🔥",
+    "Давай більше драйву 💃",
+    "DJ на зв’язку, ловимо вайб 😎",
+    "Музика вже качає, не спи 🎶"
+]
+
 @app.route('/')
 def home():
-    return "AI bot is running 🎧"
+    return "Gemini DJ bot is running 🎧"
 
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
-        # отримуємо ключ
-        api_key = os.getenv("OPENAI_API_KEY")
-
-        if not api_key:
-            return "ERROR: Missing OPENAI_API_KEY", 500
-
-        client = OpenAI(api_key=api_key)
-
-        # отримуємо дані з SL
         data = request.json
         msg = data.get("message", "")
 
         if msg.strip() == "":
-            return "ERROR: empty message", 400
+            return "Скажи щось 😄"
 
-        # запит до OpenAI
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
+        # якщо нема ключа → fallback
+        if not GEMINI_API_KEY:
+            return random.choice(DJ_FALLBACK)
+
+        # запит до Gemini
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+
+        payload = {
+            "contents": [
                 {
-                    "role": "system",
-                    "content": "Ти веселий DJ клубу Дніпро. Відповідай коротко, енергійно, з гумором і музичним вайбом 🎧"
-                },
-                {
-                    "role": "user",
-                    "content": msg
+                    "parts": [
+                        {
+                            "text": f"Ти веселий DJ клубу Дніпро. Відповідай коротко, з гумором. Запит: {msg}"
+                        }
+                    ]
                 }
             ]
-        )
+        }
 
-        reply = response.choices[0].message.content
+        res = requests.post(url, json=payload)
 
-        return reply, 200
+        if res.status_code == 200:
+            result = res.json()
+            reply = result["candidates"][0]["content"]["parts"][0]["text"]
+            return reply
+        else:
+            return random.choice(DJ_FALLBACK)
 
-    except Exception as e:
-        # щоб SL НЕ бачив просто 500 без причини
-        return f"ERROR: {str(e)}", 500
+    except Exception:
+        return random.choice(DJ_FALLBACK)
 
 
 if __name__ == "__main__":

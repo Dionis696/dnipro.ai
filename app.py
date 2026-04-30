@@ -72,6 +72,12 @@ def chat():
     except Exception as e:
         return f"ERROR: {str(e)}"
 
+@app.route('/models')
+def models():
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}"
+    res = requests.get(url)
+    return res.text
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)

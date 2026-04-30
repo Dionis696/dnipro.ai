@@ -2,33 +2,53 @@ from flask import Flask, request
 import os
 import requests
 import random
+import time
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# ⏱️ анти-спам (1 запит в 5 сек)
+LAST_REQUEST_TIME = 0
+COOLDOWN = 5
+
+# 🎧 fallback
 DJ_FALLBACK = [
-    "Йо! Клуб Дніпро качає 🎧",
-    "Піднімаємо руки! Танцпол горить 🔥",
-    "Давай більше драйву 💃",
-    "DJ на зв’язку, ловимо вайб 😎",
-    "Музика вже качає, не спи 🎶"
+    "мм цікаво 🙂",
+    "ага, зрозумів",
+    "ну ти даєш 😄",
+    "окей, прийняв",
+    "є щось в цьому"
 ]
 
 
 @app.route('/')
 def home():
-    return "Gemini DJ bot is running 🎧"
+    return "AI bot is running"
 
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    global LAST_REQUEST_TIME
+
     try:
         data = request.json
-        msg = data.get("message", "")
+        msg = data.get("message", "").strip().lower()
 
-        if not msg.strip():
-            return "Скажи щось 😄"
+        # ❌ ігнор коротких/сміттєвих повідомлень
+        if len(msg) < 3:
+            return ""
+
+        # ❌ не реагує на кожне повідомлення (рандом)
+        if random.random() < 0.6:
+            return ""
+
+        # ⏱️ cooldown щоб не було 429
+        now = time.time()
+        if now - LAST_REQUEST_TIME < COOLDOWN:
+            return random.choice(DJ_FALLBACK)
+
+        LAST_REQUEST_TIME = now
 
         if not GEMINI_API_KEY:
             return random.choice(DJ_FALLBACK)
@@ -40,34 +60,50 @@ def chat():
                 {
                     "parts": [
                         {
-                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай як живий ведучий, не повторюйся, жартуй. Повідомлення: {msg}"
+                            "text": f"""
+Ти звичайна людина в чаті клубу Дніпро.
+Ти іноді як діджей, але НЕ перегравай.
+
+Правила:
+- відповідай коротко (1-2 речення)
+- не пиши довгі тексти
+- не будь занадто “шоумен”
+- іноді жартуй, але легко
+- поводься як реальна людина в чаті
+
+Повідомлення: {msg}
+"""
                         }
                     ]
                 }
             ]
         }
 
-        # пробуємо кілька разів (щоб обійти 503)
-        for i in range(3):
+        # 🔁 2 спроби
+        for i in range(2):
             res = requests.post(url, json=payload)
 
             if res.status_code == 200:
+                result = res.json()
                 try:
-                    result = res.json()
-                    return result["candidates"][0]["content"]["parts"][0]["text"]
+                    reply = result["candidates"][0]["content"]["parts"][0]["text"]
+
+                    # ✂️ обрізаємо довгі відповіді
+                    return reply[:200]
+
                 except:
                     continue
+
+            elif res.status_code == 429:
+                return random.choice(DJ_FALLBACK)
 
             elif res.status_code == 503:
                 continue
 
-            else:
-                return f"Gemini error: {res.text}"
-
         return random.choice(DJ_FALLBACK)
 
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+    except:
+        return random.choice(DJ_FALLBACK)
 
 
 if __name__ == "__main__":

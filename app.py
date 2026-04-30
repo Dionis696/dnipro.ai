@@ -1,26 +1,3 @@
-from flask import Flask, request
-import os
-import requests
-import random
-
-app = Flask(__name__)
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-DJ_FALLBACK = [
-    "Йо! Клуб Дніпро качає 🎧",
-    "Піднімаємо руки! Танцпол горить 🔥",
-    "Давай більше драйву 💃",
-    "DJ на зв’язку, ловимо вайб 😎",
-    "Музика вже качає, не спи 🎶"
-]
-
-
-@app.route('/')
-def home():
-    return "Gemini DJ bot is running 🎧"
-
-
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
@@ -40,30 +17,32 @@ def chat():
                 {
                     "parts": [
                         {
-                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай як живий ведучий, не повторюйся, жартуй, реагуй на текст. Повідомлення: {msg}"
+                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай як живий ведучий, не повторюйся, жартуй. Повідомлення: {msg}"
                         }
                     ]
                 }
             ]
         }
 
-        res = requests.post(url, json=payload)
+        # 🔁 пробуємо 3 рази
+        for i in range(3):
+            res = requests.post(url, json=payload)
 
-        if res.status_code == 200:
-            result = res.json()
+            if res.status_code == 200:
+                result = res.json()
+                try:
+                    return result["candidates"][0]["content"]["parts"][0]["text"]
+                except:
+                    continue
 
-            try:
-                reply = result["candidates"][0]["content"]["parts"][0]["text"]
-                return reply
-            except:
-                return "Щось пішло не так 😅"
+            elif res.status_code == 503:
+                continue  # пробує ще раз
 
-        else:
-            return f"Gemini error: {res.text}"
+            else:
+                return f"Gemini error: {res.text}"
+
+        # якщо не вийшло після 3 спроб
+        return random.choice(DJ_FALLBACK)
 
     except Exception as e:
         return f"ERROR: {str(e)}"
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)

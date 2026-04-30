@@ -8,17 +8,17 @@ app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# ⏱️ анти-спам (1 запит в 5 сек)
+# ⏱️ анти-спам
 LAST_REQUEST_TIME = 0
-COOLDOWN = 5
+COOLDOWN = 2  # 2 секунди
 
-# 🎧 fallback
+# fallback відповіді (якщо API не відповів)
 DJ_FALLBACK = [
-    "мм цікаво 🙂",
-    "ага, зрозумів",
-    "ну ти даєш 😄",
-    "окей, прийняв",
-    "є щось в цьому"
+    "та може й справді варто змінити трек",
+    "не знаю, але звучить підозріло 😄",
+    "а ти сам як думаєш?",
+    "може просто глюк якийсь",
+    "ну щось тут не те"
 ]
 
 
@@ -35,15 +35,15 @@ def chat():
         data = request.json
         msg = data.get("message", "").strip().lower()
 
-        # ❌ ігнор коротких/сміттєвих повідомлень
+        # ❌ дуже короткі повідомлення ігноруємо
         if len(msg) < 3:
             return ""
 
-        # ❌ не реагує на кожне повідомлення (рандом)
-        if random.random() < 0.6:
+        # 🎲 не відповідає на все підряд (30% ігнор)
+        if random.random() < 0.3:
             return ""
 
-        # ⏱️ cooldown щоб не було 429
+        # ⏱️ cooldown (щоб не було 429)
         now = time.time()
         if now - LAST_REQUEST_TIME < COOLDOWN:
             return random.choice(DJ_FALLBACK)
@@ -61,15 +61,17 @@ def chat():
                     "parts": [
                         {
                             "text": f"""
-Ти звичайна людина в чаті клубу Дніпро.
-Ти іноді як діджей, але НЕ перегравай.
+Ти звичайна людина в чаті клубу.
+
+Говориш просто і по темі.
+Не будь клоуном і не будь занадто діджеєм.
 
 Правила:
-- відповідай коротко (1-2 речення)
-- не пиши довгі тексти
-- не будь занадто “шоумен”
-- іноді жартуй, але легко
-- поводься як реальна людина в чаті
+- коротко або середньо (1-3 речення)
+- відповідай по змісту
+- іноді легкий жарт
+- не повторюйся
+- не пиши пусті фрази типу "ага зрозумів"
 
 Повідомлення: {msg}
 """
@@ -84,18 +86,15 @@ def chat():
             res = requests.post(url, json=payload)
 
             if res.status_code == 200:
-                result = res.json()
                 try:
+                    result = res.json()
                     reply = result["candidates"][0]["content"]["parts"][0]["text"]
-
-                    # ✂️ обрізаємо довгі відповіді
-                    return reply[:200]
-
+                    return reply[:300]  # обмеження довжини
                 except:
                     continue
 
             elif res.status_code == 429:
-                return random.choice(DJ_FALLBACK)
+                return "трохи перевантажено, давай через секунду ще раз"
 
             elif res.status_code == 503:
                 continue

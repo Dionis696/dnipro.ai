@@ -27,21 +27,21 @@ def chat():
         data = request.json
         msg = data.get("message", "")
 
-        if msg.strip() == "":
+        if not msg.strip():
             return "Скажи щось 😄"
 
-        # якщо ключа нема -> fallback
+        # якщо нема ключа — fallback
         if not GEMINI_API_KEY:
             return random.choice(DJ_FALLBACK)
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
 
         payload = {
             "contents": [
                 {
                     "parts": [
                         {
-                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай дружньо, коротко, з гумором. Повідомлення: {msg}"
+                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай коротко, з гумором. Повідомлення: {msg}"
                         }
                     ]
                 }

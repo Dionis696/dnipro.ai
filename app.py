@@ -15,6 +15,13 @@ DJ_FALLBACK = [
     "Музика вже качає, не спи 🎶"
 ]
 
+# список моделей (він сам підбере робочу)
+MODELS = [
+    "gemini-1.5-pro-latest",
+    "gemini-1.5-flash-latest",
+    "gemini-pro"
+]
+
 
 @app.route('/')
 def home():
@@ -30,37 +37,37 @@ def chat():
         if not msg.strip():
             return "Скажи щось 😄"
 
-        # якщо нема ключа — fallback
         if not GEMINI_API_KEY:
             return random.choice(DJ_FALLBACK)
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+        # пробуємо моделі по черзі
+        for model in MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
 
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай коротко, з гумором. Повідомлення: {msg}"
-                        }
-                    ]
-                }
-            ]
-        }
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": f"Ти веселий AI DJ клубу Дніпро. Відповідай коротко, з гумором. Повідомлення: {msg}"
+                            }
+                        ]
+                    }
+                ]
+            }
 
-        res = requests.post(url, json=payload)
+            res = requests.post(url, json=payload)
 
-        if res.status_code == 200:
-            result = res.json()
+            if res.status_code == 200:
+                try:
+                    result = res.json()
+                    reply = result["candidates"][0]["content"]["parts"][0]["text"]
+                    return reply
+                except:
+                    continue  # якщо формат дивний — пробує іншу модель
 
-            try:
-                reply = result["candidates"][0]["content"]["parts"][0]["text"]
-                return reply
-            except Exception:
-                return "Gemini відповів дивно 😅"
-
-        else:
-            return f"Gemini error: {res.text}"
+        # якщо всі моделі не спрацювали
+        return random.choice(DJ_FALLBACK)
 
     except Exception as e:
         return f"ERROR: {str(e)}"

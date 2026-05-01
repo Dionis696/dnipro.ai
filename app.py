@@ -1,107 +1,92 @@
 from flask import Flask, request
-import os
 import requests
-import random
+import os
 import time
+import random
+
+import luna_brain
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# ⏱️ анти-спам
-LAST_REQUEST_TIME = 0
-COOLDOWN = 2  # секунди
+last_reply_time = 0
 
-# fallback (людські відповіді)
-DJ_FALLBACK = [
-    "та може й варто змінити трек",
-    "не знаю, але щось дивне 😄",
-    "а ти як думаєш?",
-    "може просто глюк",
-    "ну щось тут не те"
-]
+
+# 🔹 Gemini функція
+def ask_gemini(msg):
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+    data = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Ти дівчина Luna, спілкуєшся як жива людина, коротко, іноді флірт 😏. Відповідь 1-2 речення.\n\n{msg}"
+                    }
+                ]
+            }
+        ]
+    }
+
+    try:
+        r = requests.post(url, json=data, timeout=5)
+        res = r.json()
+
+        return res["candidates"][0]["content"]["parts"][0]["text"]
+
+    except:
+        return None
 
 
 @app.route('/')
 def home():
-    return "AI bot is running"
+    return "Luna AI працює 💃"
 
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global LAST_REQUEST_TIME
+    global last_reply_time
 
-    try:
-        data = request.json
-        msg = data.get("message", "").strip().lower()
+    data = request.json
+    msg = data.get("message", "")
 
-        # ❌ ігнор дуже коротких
-        if len(msg) < 3:
-            return ""
+    now = time.time()
 
-        # 🎲 не відповідає на кожне повідомлення
-        if random.random() < 0.3:
-            return ""
-
-        # ⏱️ cooldown
-        now = time.time()
-        if now - LAST_REQUEST_TIME < COOLDOWN:
-            return ""
-
-        LAST_REQUEST_TIME = now
-
-        if not GEMINI_API_KEY:
-            return random.choice(DJ_FALLBACK)
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"""
-Ти звичайна людина в чаті клубу.
-Говориш просто і по темі.
-
-Правила:
-- 1-3 речення
-- не пиши довго
-- не будь клоуном
-- іноді легкий жарт
-
-Повідомлення: {msg}
-"""
-                        }
-                    ]
-                }
-            ]
-        }
-
-        # 🔁 пробуємо 2 рази
-        for _ in range(2):
-            res = requests.post(url, json=payload)
-
-            if res.status_code == 200:
-                try:
-                    result = res.json()
-                    reply = result["candidates"][0]["content"]["parts"][0]["text"]
-                    return reply[:300]
-                except:
-                    continue
-
-            elif res.status_code in [429, 503]:
-                time.sleep(1)
-                continue
-
-        # якщо не вийшло — або мовчимо, або fallback
-        if random.random() < 0.5:
-            return ""
-        else:
-            return random.choice(DJ_FALLBACK)
-
-    except:
+    # ⛔ анти-спам
+    if now - last_reply_time < 2:
         return ""
+
+    last_reply_time = now
+
+    msg_lower = msg.lower()
+
+    # 🔥 чи звернулись до Luna
+    is_called = "luna" in msg_lower or "луна" in msg_lower
+
+    # 🎲 шанс відповіді
+    if not is_called:
+        if random.random() > 0.2:
+            return ""
+
+    # 🧠 пробуємо Gemini
+    reply = ask_gemini(msg)
+
+    # ❌ якщо Gemini впав
+    if not reply:
+        reply = luna_brain.get_reply(msg)
+
+    # 🎭 іноді додаємо історію
+    extra = luna_brain.maybe_story()
+    if extra:
+        reply += "\n" + extra
+
+    # 💃 іноді танці
+    extra2 = luna_brain.maybe_dance()
+    if extra2:
+        reply += "\n" + extra2
+
+    return reply
 
 
 if __name__ == "__main__":

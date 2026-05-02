@@ -6,7 +6,7 @@ from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
+GEMINI_API_KEY = "AIzaSyBCgyk_ze_3A1DoxNkZhi-19VIMM1JWfhw"
 MODEL = "models/gemini-2.5-flash"
 
 last_api_call = 0

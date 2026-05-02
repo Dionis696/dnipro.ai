@@ -1,93 +1,101 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import requests
-import os
 import time
 import random
+import re
 
-import luna_brain
+from luna_brain import (
+    should_ignore,
+    detect_language,
+    should_use_ai,
+    get_fallback_response,
+    get_atmosphere_message,
+    update_user_memory
+)
 
 app = Flask(__name__)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
 
-last_reply_time = 0
+last_request_time = 0
+COOLDOWN = 6  # секунд між AI запитами
 
-
-# 🔹 Gemini функція
-def ask_gemini(msg):
+# ===== GEMINI =====
+def ask_gemini(user_text, lang):
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+    prompt = f"""
+You are Luna, a girl in a nightclub chat (Club DNIPRO).
+Reply like a real human, short and natural (1-2 sentences max).
+Be slightly playful and casual.
+
+Language: {lang}
+
+User: {user_text}
+"""
 
     data = {
         "contents": [
             {
                 "parts": [
-                    {
-                        "text": f"Ти дівчина Luna, спілкуєшся як жива людина, коротко, іноді флірт 😏. Відповідь 1-2 речення.\n\n{msg}"
-                    }
+                    {"text": prompt}
                 ]
             }
         ]
     }
 
     try:
-        r = requests.post(url, json=data, timeout=5)
-        res = r.json()
+        r = requests.post(url, json=data)
+        result = r.json()
 
-        return res["candidates"][0]["content"]["parts"][0]["text"]
+        return result["candidates"][0]["content"]["parts"][0]["text"]
 
     except:
         return None
 
 
-@app.route('/')
-def home():
-    return "Luna AI працює 💃"
-
-
+# ===== CHAT =====
 @app.route('/chat', methods=['POST'])
 def chat():
-    global last_reply_time
+    global last_request_time
 
     data = request.json
-    msg = data.get("message", "")
+    user = data.get("user", "user")
+    message = data.get("message", "")
+
+    # ❌ ігнор сміття
+    if should_ignore(message):
+        return jsonify({"reply": ""})
+
+    # 🧠 пам’ять
+    update_user_memory(user, message)
+
+    # 🌍 мова
+    lang = detect_language(message)
+
+    # 🤖 чи викликати AI
+    use_ai = should_use_ai(message)
 
     now = time.time()
 
-    # ⛔ анти-спам
-    if now - last_reply_time < 2:
-        return ""
+    # ===== GEMINI =====
+    if use_ai and (now - last_request_time > COOLDOWN):
+        ai_reply = ask_gemini(message, lang)
 
-    last_reply_time = now
+        if ai_reply:
+            last_request_time = now
+            return jsonify({"reply": ai_reply})
 
-    msg_lower = msg.lower()
+    # ===== FALLBACK =====
+    reply = get_fallback_response(user, message, lang)
 
-    # 🔥 чи звернулись до Luna
-    is_called = "luna" in msg_lower or "луна" in msg_lower
+    # 🎧 іноді атмосфера
+    if random.random() < 0.08:
+        reply += "\n" + get_atmosphere_message()
 
-    # 🎲 шанс відповіді
-    if not is_called:
-        if random.random() > 0.2:
-            return ""
-
-    # 🧠 пробуємо Gemini
-    reply = ask_gemini(msg)
-
-    # ❌ якщо Gemini впав
-    if not reply:
-        reply = luna_brain.get_reply(msg)
-
-    # 🎭 іноді додаємо історію
-    extra = luna_brain.maybe_story()
-    if extra:
-        reply += "\n" + extra
-
-    # 💃 іноді танці
-    extra2 = luna_brain.maybe_dance()
-    if extra2:
-        reply += "\n" + extra2
-
-    return reply
+    return jsonify({"reply": reply})
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+# ===== RUN =====
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)

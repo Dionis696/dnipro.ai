@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
+import codecs
 
 from luna_brain import (
     should_ignore,
@@ -21,25 +22,38 @@ last_request_time = 0
 COOLDOWN = 6
 
 
-# ===== 🔥 FIX UTF-8 (ГОЛОВНЕ РІШЕННЯ) =====
+# ===== 🔥 UNIVERSAL TEXT FIX (FINAL) =====
 def fix_text(text):
     if not text:
         return text
+
     try:
-        # repair broken unicode like u00d0u00a5
-        return text.encode("raw_unicode_escape").decode("utf-8", errors="ignore")
+        # 1) fix \uXXXX (JSON escaped unicode)
+        text = codecs.decode(text, "unicode_escape")
+
+        # 2) fix broken UTF-8 / u00d0 style garbage
+        try:
+            text = text.encode("latin1").decode("utf-8")
+        except:
+            pass
+
+        # 3) final safety cleanup
+        text = text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+
+        return text
+
     except:
         return text
 
 
-# ===== GEMINI =====
+# ===== 🤖 GEMINI =====
 def ask_gemini(user_text, lang):
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     prompt = f"""
 You are Luna 💃 DJ girl in Club DNIPRO 🎧
 Reply short (1-2 sentences), natural, playful.
-Add emojis sometimes 😏🔥💃🎶
+Add emojis 😏🔥💃🎶 sometimes.
 
 Language: {lang}
 User: {user_text}
@@ -64,7 +78,7 @@ User: {user_text}
         return None
 
 
-# ===== CHAT =====
+# ===== 💬 CHAT =====
 @app.route('/chat', methods=['POST'])
 def chat():
     global last_request_time
@@ -73,12 +87,17 @@ def chat():
     user = data.get("user", "user")
     message = data.get("message", "")
 
+    # ❌ ignore spam / garbage
     if should_ignore(message):
         return jsonify({"reply": ""})
 
+    # 🧠 memory
     update_user_memory(user, message)
 
+    # 🌍 language detect
     lang = detect_language(message)
+
+    # 🤖 AI decision
     use_ai = should_use_ai(message)
 
     now = time.time()
@@ -94,7 +113,7 @@ def chat():
     # ===== FALLBACK =====
     reply = fix_text(get_fallback_response(user, message, lang))
 
-    # ===== ATMOSPHERE =====
+    # 🎧 atmosphere mode
     if random.random() < 0.10:
         reply += "\n" + fix_text(get_atmosphere_message())
 

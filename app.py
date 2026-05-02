@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
-import codecs
 import json
+import codecs
 
 from luna_brain import (
     should_ignore,
@@ -20,13 +20,14 @@ app.config['JSON_AS_ASCII'] = False
 GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
 
 last_request_time = 0
-COOLDOWN = 6
+COOLDOWN = 5
 
 
-# ===== 🔥 ULTRA TEXT FIX =====
+# ===== 🔥 FIX TEXT (UTF + EMOJI SAFE) =====
 def fix_text(text):
     if not text:
-        return text
+        return "..."
+
     try:
         if isinstance(text, bytes):
             text = text.decode("utf-8", errors="ignore")
@@ -38,9 +39,8 @@ def fix_text(text):
         except:
             pass
 
-        text = json.loads(json.dumps(text, ensure_ascii=False))
+        return json.loads(json.dumps(text, ensure_ascii=False))
 
-        return text
     except:
         return text
 
@@ -52,11 +52,12 @@ def ask_gemini(user_text, lang):
     prompt = f"""
 You are Luna 💃 DJ girl in Club DNIPRO 🎧
 
-IMPORTANT:
-- ALWAYS answer in {lang}
-- Keep it short (1-2 sentences)
+RULES:
+- Always answer in {lang}
+- Never switch language
+- 1-2 sentences max
 - Club vibe, playful
-- Add emojis 😏🔥💃🎶
+- Emojis allowed 😏🔥💃🎶
 
 User: {user_text}
 """
@@ -88,7 +89,7 @@ def chat():
     message = data.get("message", "")
 
     if should_ignore(message):
-        return jsonify({"reply": ""})
+        return jsonify({"reply": "напиши простіше 😏"})
 
     update_user_memory(user, message)
 
@@ -109,7 +110,7 @@ def chat():
     reply = fix_text(get_fallback_response(user, message, lang))
 
     # ===== ATMOSPHERE =====
-    if random.random() < 0.10:
+    if random.random() < 0.12:
         reply += "\n" + fix_text(get_atmosphere_message())
 
     return jsonify({"reply": reply})

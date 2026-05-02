@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
+import json
 import codecs
 
 from luna_brain import (
@@ -22,23 +23,31 @@ last_request_time = 0
 COOLDOWN = 6
 
 
-# ===== 🔥 UNIVERSAL TEXT FIX (FINAL) =====
+# ===== 🔥 ULTRA FIX (ALL ENCODING TYPES) =====
 def fix_text(text):
     if not text:
         return text
 
     try:
-        # 1) fix \uXXXX (JSON escaped unicode)
+        # 1) bytes safety
+        if isinstance(text, bytes):
+            text = text.decode("utf-8", errors="ignore")
+
+        # 2) fix escaped unicode (\uXXXX)
         text = codecs.decode(text, "unicode_escape")
 
-        # 2) fix broken UTF-8 / u00d0 style garbage
+        # 3) fix broken latin1 UTF-8 (u00d0 style)
         try:
             text = text.encode("latin1").decode("utf-8")
         except:
             pass
 
-        # 3) final safety cleanup
-        text = text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+        # 4) fix raw u0430u0441 style garbage
+        if "u04" in text or "u00d" in text:
+            text = text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+
+        # 5) final safe normalization
+        text = json.loads(json.dumps(text, ensure_ascii=False))
 
         return text
 
@@ -87,14 +96,14 @@ def chat():
     user = data.get("user", "user")
     message = data.get("message", "")
 
-    # ❌ ignore spam / garbage
+    # ❌ ignore spam
     if should_ignore(message):
         return jsonify({"reply": ""})
 
     # 🧠 memory
     update_user_memory(user, message)
 
-    # 🌍 language detect
+    # 🌍 language
     lang = detect_language(message)
 
     # 🤖 AI decision
@@ -113,7 +122,7 @@ def chat():
     # ===== FALLBACK =====
     reply = fix_text(get_fallback_response(user, message, lang))
 
-    # 🎧 atmosphere mode
+    # 🎧 atmosphere
     if random.random() < 0.10:
         reply += "\n" + fix_text(get_atmosphere_message())
 

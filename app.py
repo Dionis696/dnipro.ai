@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
-import json
 import codecs
+import json
 
 from luna_brain import (
     should_ignore,
@@ -23,34 +23,24 @@ last_request_time = 0
 COOLDOWN = 6
 
 
-# ===== 🔥 ULTRA FIX (ALL ENCODING TYPES) =====
+# ===== 🔥 ULTRA TEXT FIX =====
 def fix_text(text):
     if not text:
         return text
-
     try:
-        # 1) bytes safety
         if isinstance(text, bytes):
             text = text.decode("utf-8", errors="ignore")
 
-        # 2) fix escaped unicode (\uXXXX)
         text = codecs.decode(text, "unicode_escape")
 
-        # 3) fix broken latin1 UTF-8 (u00d0 style)
         try:
             text = text.encode("latin1").decode("utf-8")
         except:
             pass
 
-        # 4) fix raw u0430u0441 style garbage
-        if "u04" in text or "u00d" in text:
-            text = text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
-
-        # 5) final safe normalization
         text = json.loads(json.dumps(text, ensure_ascii=False))
 
         return text
-
     except:
         return text
 
@@ -61,18 +51,19 @@ def ask_gemini(user_text, lang):
 
     prompt = f"""
 You are Luna 💃 DJ girl in Club DNIPRO 🎧
-Reply short (1-2 sentences), natural, playful.
-Add emojis 😏🔥💃🎶 sometimes.
 
-Language: {lang}
+IMPORTANT:
+- ALWAYS answer in {lang}
+- Keep it short (1-2 sentences)
+- Club vibe, playful
+- Add emojis 😏🔥💃🎶
+
 User: {user_text}
 """
 
     data = {
         "contents": [
-            {
-                "parts": [{"text": prompt}]
-            }
+            {"parts": [{"text": prompt}]}
         ]
     }
 
@@ -96,33 +87,28 @@ def chat():
     user = data.get("user", "user")
     message = data.get("message", "")
 
-    # ❌ ignore spam
     if should_ignore(message):
         return jsonify({"reply": ""})
 
-    # 🧠 memory
     update_user_memory(user, message)
 
-    # 🌍 language
     lang = detect_language(message)
-
-    # 🤖 AI decision
     use_ai = should_use_ai(message)
 
     now = time.time()
 
-    # ===== GEMINI =====
+    # ===== AI =====
     if use_ai and (now - last_request_time > COOLDOWN):
         ai_reply = ask_gemini(message, lang)
 
         if ai_reply:
             last_request_time = now
-            return jsonify({"reply": ai_reply})
+            return jsonify({"reply": fix_text(ai_reply)})
 
     # ===== FALLBACK =====
     reply = fix_text(get_fallback_response(user, message, lang))
 
-    # 🎧 atmosphere
+    # ===== ATMOSPHERE =====
     if random.random() < 0.10:
         reply += "\n" + fix_text(get_atmosphere_message())
 

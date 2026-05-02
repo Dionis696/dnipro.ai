@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
-import re
 import json
-import codecs
 
 from luna_brain import (
     should_ignore,
@@ -17,21 +15,22 @@ from luna_brain import (
 
 app = Flask(__name__)
 
-# 🔥 FIX UTF-8 ДЛЯ SECOND LIFE
+# 🔥 IMPORTANT: SL UTF-8 FIX
 app.config['JSON_AS_ASCII'] = False
 
 GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
 
 last_request_time = 0
-COOLDOWN = 6  # секунд між AI запитами
+COOLDOWN = 6
 
 
-# ===== FIX TEXT (ГОЛОВНЕ ВИПРАВЛЕННЯ) =====
+# ===== 🔥 FIX UTF-8 / BROKEN ENCODING =====
 def fix_text(text):
     if not text:
         return text
     try:
-        return codecs.decode(text, "unicode_escape")
+        # FIX для u00d0u00a5 типу багів
+        return text.encode("latin1").decode("utf-8")
     except:
         return text
 
@@ -42,11 +41,9 @@ def ask_gemini(user_text, lang):
 
     prompt = f"""
 You are Luna, a girl in a nightclub chat (Club DNIPRO).
-Reply like a real human, short and natural (1-2 sentences max).
-Be slightly playful and casual.
+Reply short (1-2 sentences), natural, playful.
 
 Language: {lang}
-
 User: {user_text}
 """
 
@@ -61,7 +58,7 @@ User: {user_text}
     }
 
     try:
-        r = requests.post(url, json=data)
+        r = requests.post(url, json=data, timeout=10)
         result = r.json()
 
         text = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -71,7 +68,7 @@ User: {user_text}
         return None
 
 
-# ===== CHAT =====
+# ===== CHAT ENDPOINT =====
 @app.route('/chat', methods=['POST'])
 def chat():
     global last_request_time
@@ -106,7 +103,7 @@ def chat():
     # ===== FALLBACK =====
     reply = fix_text(get_fallback_response(user, message, lang))
 
-    # 🎧 atmosphere
+    # 🎧 atmosphere (optional vibe)
     if random.random() < 0.08:
         reply += "\n" + fix_text(get_atmosphere_message())
 

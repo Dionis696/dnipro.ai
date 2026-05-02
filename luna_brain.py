@@ -1,7 +1,7 @@
 import random
 import re
 
-# ===== ПАМ'ЯТЬ =====
+# ===== MEMORY =====
 users = {}
 
 def update_user_memory(user, message):
@@ -10,159 +10,119 @@ def update_user_memory(user, message):
     users[user]["count"] += 1
 
 
-# ===== ІГНОР =====
+# ===== IGNORE =====
 def should_ignore(text):
-    if len(text) > 120:
+    if len(text) > 150:
         return True
 
     bad = re.findall(r"[^\w\sа-яА-ЯёЁa-zA-Z]", text)
-    if len(bad) > len(text) * 0.4:
+    if len(bad) > len(text) * 0.5:
         return True
 
     return False
 
 
-# ===== МОВА (FIXED, але м’яко) =====
+# ===== LANGUAGE FIX (СТАБІЛЬНИЙ) =====
 def detect_language(text):
     text = text.lower()
 
-    ua_chars = len(re.findall(r"[а-щьюяєіїґ]", text))
-    ru_chars = len(re.findall(r"[а-яё]", text))
-    en_chars = len(re.findall(r"[a-z]", text))
+    ua = len(re.findall(r"[а-щьюяєіїґ]", text))
+    ru = len(re.findall(r"[а-яё]", text))
+    en = len(re.findall(r"[a-z]", text))
 
-    # даємо пріоритет кирилиці
-    if ua_chars > 0 and ua_chars >= ru_chars:
+    if ua >= ru and ua > 0:
         return "UA"
-    if ru_chars > ua_chars and ru_chars > 0:
+    if ru > ua:
         return "RU"
-    if en_chars > 0 and ua_chars == 0:
+    if en > 0:
         return "EN"
 
     return "UA"
 
 
-# ===== AI TRIGGER (НЕ ЛАМАТИ ЛОГІКУ) =====
+# ===== AI TRIGGER (СТАБІЛЬНИЙ) =====
 def should_use_ai(text):
-    text = text.lower()
+    t = text.lower()
 
-    if "luna" in text or "луна" in text:
+    if "luna" in t or "луна" in t:
         return True
 
-    # тільки якщо реально питання
-    if "?" in text:
+    # короткі фрази → AI (щоб не було тупих fallback)
+    if len(t) < 20:
         return True
 
     return False
 
 
 # =========================
-# 🎭 ТВОЇ КАТЕГОРІЇ (ЗБЕРЕЖЕНО 100%)
+# 🎭 UA
 # =========================
 
 greetings_ua = [
-    "Привіт 🙂 рада тебе бачити",
-    "Йо, привіт 😎 як настрій?",
-    "Привіт, заходь не стій 😉",
-    "О, новенький? вітаю в клубі 😏",
-    "Хей, привіт 💃 давно не бачилися",
+    "Привіт 🙂 я тут 💃",
+    "Йо 😏 як настрій?",
+    "Хей 🔥 заходь у ритм",
 ]
 
 how_ua = [
-    "Та нормально, ловлю вайб 😏 а ти як?",
-    "Все ок, музика качає 🔥",
-    "Все ок, трохи музики і настрій топ 🔥",
-    "Живу, кайфую 😉",
-    "Та як завжди — музика і настрій 😎",
+    "Норм 😏 музика качає 🔥",
+    "Все ок 💃 ти як?",
 ]
 
 music_ua = [
-    "щось з басом зараз би зайшло 😏",
-    "давай качнемо танцпол 💃",
-    "мм щось з 2000-х зараз би зайшло 😏",
-    "може щось танцювальне включимо? 💃",
-    "я б зараз щось з басом поставила 🔥",
-    "цей трек норм, але можна ще качнути 😉",
+    "давай баси 🔥😏",
+    "цей танцпол чекає 💃",
 ]
 
 flirt_ua = [
-    "ти сьогодні підозріло цікавий 😏",
-    "мені подобається як ти пишеш 😉",
-    "обережно… я можу спокусити на танець 💋",
-    "не дивись так… я ж теж людина 😄",
+    "ти цікавий 😏",
+    "ловиш мій вайб 💃🔥",
 ]
 
 neutral_ua = [
-    "ага, зрозуміла 😉",
-    "мм цікаво 🙂",
-    "ну ти даєш 😄",
-    "є щось в цьому 😏",
+    "ага 😏",
+    "зрозуміла 💃",
+    "мм 🙂",
 ]
 
 
-greetings_en = [
-    "hey 🙂 nice to see you",
-    "yo 😎 what's your vibe?",
-    "hi there 😉 don't just stand, join in",
-]
+# =========================
+# EN
+# =========================
 
-how_en = [
-    "I'm good 😏 just vibing, you?",
-    "all good, music hits 🔥",
-]
-
-music_en = [
-    "we need something with bass 😏",
-    "let’s make the floor move 💃",
-]
-
-flirt_en = [
-    "you're kinda interesting today 😏",
-    "careful… I might pull you to dance 💋",
-]
-
-neutral_en = [
-    "yeah 😉 got you",
-    "hmm interesting 🙂",
-]
+greetings_en = ["hey 😏", "yo 💃"]
+how_en = ["good 🔥", "all vibe 😏"]
+music_en = ["bass time 🔥", "let’s dance 💃"]
+neutral_en = ["yeah 😏", "hmm 🙂"]
 
 
-neutral_ru = [
-    "ну да 😏",
-    "поняла 😉",
-    "интересно 🙂",
-]
+# =========================
+# RU
+# =========================
+
+neutral_ru = ["ну да 😏", "поняла 💃", "ок 🙂"]
 
 
-# ===== КНИГА =====
+# ===== BOOK =====
 book_lines = []
 
 def load_book():
     global book_lines
     try:
         with open("luna_book.txt", "r", encoding="utf-8") as f:
-            book_lines = [line.strip() for line in f if line.strip()]
+            book_lines = [l.strip() for l in f if l.strip()]
     except:
         book_lines = []
 
 load_book()
 
 
-# ===== ВІДПОВІДЬ =====
+# ===== RESPONSE =====
 def get_fallback_response(user, message, lang):
     msg = message.lower()
 
     if lang == "EN":
-        if "hi" in msg:
-            base = random.choice(greetings_en)
-        elif "how" in msg:
-            base = random.choice(how_en)
-        elif "music" in msg:
-            base = random.choice(music_en)
-        else:
-            base = random.choice(neutral_en)
-
-        if random.random() < 0.3:
-            base += "\n" + random.choice(flirt_en)
+        base = random.choice(greetings_en)
 
     elif lang == "RU":
         base = random.choice(neutral_ru)
@@ -172,22 +132,21 @@ def get_fallback_response(user, message, lang):
             base = random.choice(greetings_ua)
         elif "як" in msg:
             base = random.choice(how_ua)
-        elif "муз" in msg or "трек" in msg:
+        elif "муз" in msg:
             base = random.choice(music_ua)
         else:
             base = random.choice(neutral_ua)
 
-        if random.random() < 0.3:
+        if random.random() < 0.35:
             base += "\n" + random.choice(flirt_ua)
 
-    # 🎧 атмосфера (твоя книга НЕ втрачена)
     if book_lines and random.random() < 0.4:
         base += "\n" + random.choice(book_lines)
 
     return base
 
 
-# ===== АТМОСФЕРА =====
+# ===== ATMOSPHERE =====
 def get_atmosphere_message():
     if not book_lines:
         return ""

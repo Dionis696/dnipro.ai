@@ -79,21 +79,21 @@ neutral_ua = [
 greetings_en = [
     "hey 🙂 nice to see you",
     "yo 😎 what's your vibe?",
-    "hi there 😉 don't just stand, join in",
+    "hi 😉 join the vibe",
 ]
 
 how_en = [
-    "I'm good 😏 just vibing, you?",
+    "I'm good 😏 just vibing",
     "all good, music hits 🔥",
 ]
 
 music_en = [
-    "we need something with bass 😏",
-    "let’s make the floor move 💃",
+    "we need more bass 😏",
+    "let’s make it louder 💃",
 ]
 
 flirt_en = [
-    "you're kinda interesting today 😏",
+    "you're interesting today 😏",
     "careful… I might pull you to dance 💋",
 ]
 
@@ -128,24 +128,25 @@ load_book()
 def get_fallback_response(user, message, lang):
     msg = message.lower()
 
-    # ===== ВИБІР БАЗИ =====
+    # базова відповідь
     if lang == "EN":
         if "hi" in msg:
             base = random.choice(greetings_en)
         elif "how" in msg:
             base = random.choice(how_en)
-        elif "music" in msg or "track" in msg:
+        elif "music" in msg:
             base = random.choice(music_en)
         else:
             base = random.choice(neutral_en)
 
-        if random.random() < 0.3:
+        # трохи флірту (рідко)
+        if random.random() < 0.15:
             base += "\n" + random.choice(flirt_en)
 
     elif lang == "RU":
         base = random.choice(neutral_ru)
 
-    else:  # UA
+    else:
         if "привіт" in msg:
             base = random.choice(greetings_ua)
         elif "як" in msg:
@@ -155,13 +156,12 @@ def get_fallback_response(user, message, lang):
         else:
             base = random.choice(neutral_ua)
 
-        if random.random() < 0.3:
+        if random.random() < 0.15:
             base += "\n" + random.choice(flirt_ua)
 
-    # ===== КНИГА (мікс) =====
-    if book_lines and random.random() < 0.4:
-        lines = random.randint(1, 2)
-        base += "\n" + "\n".join(random.sample(book_lines, min(lines, len(book_lines))))
+    # 📖 книга (ДУЖЕ ОБЕРЕЖНО)
+    if book_lines and random.random() < 0.2:
+        base += "\n" + random.choice(book_lines)
 
     return base
 
@@ -170,5 +170,4 @@ def get_fallback_response(user, message, lang):
 def get_atmosphere_message():
     if not book_lines:
         return ""
-
-    return "\n".join(random.sample(book_lines, random.randint(1, 2)))
+    return random.choice(book_lines)

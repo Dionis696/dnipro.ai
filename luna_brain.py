@@ -1,6 +1,7 @@
 import random
 import time
 
+# памʼять користувачів
 users = {}
 
 def get_user(user):
@@ -31,6 +32,7 @@ def update_user(user, message):
         data["favorite"] = True
 
 
+# фрази
 ua = [
     "мм цікаво 🙂",
     "ну ти даєш 😄",
@@ -57,6 +59,7 @@ memory = [
 def get_fallback_response(user, message):
     data = get_user(user)
 
+    # антиспам
     if time.time() - data["last_reply"] < 4:
         return None
 

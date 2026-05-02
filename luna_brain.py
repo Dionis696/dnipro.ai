@@ -1,172 +1,208 @@
 import random
-import re
 import time
-import requests
 
 # =========================
-# 🧠 MEMORY / ANTI REPEAT
+# 🧠 ПАМʼЯТЬ
 # =========================
-last_reply_by_user = {}
 
-def avoid_repeat(user, reply):
-    last = last_reply_by_user.get(user)
+users = {}
 
-    if last == reply:
-        return None
+def get_user(user):
+    if user not in users:
+        users[user] = {
+            "count": 0,
+            "mood": 0,
+            "gender": "unknown",
+            "favorite": False,
+            "last_seen": 0,
+            "last_reply": 0
+        }
+    return users[user]
 
-    last_reply_by_user[user] = reply
-    return reply
+
+def update_user(user, message):
+    data = get_user(user)
+
+    data["count"] += 1
+    data["last_seen"] = time.time()
+
+    msg = message.lower()
+
+    if any(w in msg for w in ["люблю", "love", "клас", "круто"]):
+        data["mood"] += 1
+
+    if any(w in msg for w in ["фігня", "погано", "бісить"]):
+        data["mood"] -= 1
+
+    if "я дівчина" in msg or "i am a girl" in msg:
+        data["gender"] = "female"
+
+    if "я хлопець" in msg or "i am a guy" in msg:
+        data["gender"] = "male"
+
+    if data["count"] > 15 and data["mood"] > 2:
+        data["favorite"] = True
 
 
 # =========================
-# ⚙️ CONFIG
+# 🎭 ФРАЗИ
 # =========================
-GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
-COOLDOWN = 5
-last_ai_time = 0
+
+ua_greet = [
+    "Привіт 🙂 рада тебе бачити",
+    "Йо 😎 ти як завжди вчасно",
+    "О, з’явився 😏",
+    "Ну привіт 😉",
+]
+
+ua_neutral = [
+    "мм цікаво 🙂",
+    "ну ти даєш 😄",
+    "є щось в цьому 😏",
+    "ха, звучить непогано 😎",
+]
+
+ua_flirt = [
+    "ти сьогодні підозріло цікавий 😏",
+    "мені подобається як ти пишеш 😉",
+    "обережно… я можу затягнути тебе в танець 💋",
+]
+
+ua_cold = [
+    "мм… ну ок 🙂",
+    "не переконав 😉",
+    "я ще думаю 😏",
+]
+
+ua_music = [
+    "давай качнемо танцпол 💃",
+    "цей трек вже розкачує 🔥",
+    "музика вже качає 🎧",
+]
+
+greetings_en = [
+    "hey 🙂 nice to see you",
+    "yo 😎 you came at the right time",
+]
+
+neutral_en = [
+    "hmm interesting 🙂",
+    "not bad 😎",
+]
+
+flirt_en = [
+    "you're kinda interesting 😏",
+    "I like your vibe 😉",
+]
+
+cold_en = [
+    "hmm… alright 🙂",
+]
+
+music_en = [
+    "we need more bass 🔥",
+]
+
+memory_phrases = [
+    "я тебе пам’ятаю 😉",
+    "ти тут не вперше 😏",
+]
 
 
 # =========================
-# 🌍 LANGUAGE DETECTOR (СТАБІЛЬНИЙ)
+# 🎯 РЕАКЦІЇ
 # =========================
-def detect_language(text):
-    text = text.lower()
 
-    ua = len(re.findall(r"[а-щьюяєіїґ]", text))
-    ru = len(re.findall(r"[а-яё]", text))
-    en = len(re.findall(r"[a-z]", text))
+reactions = {
+    "dance": [
+        "ну все, пішли танцювати 💃",
+        "я вже на танцполі 😏",
+    ],
+    "kiss": [
+        "обережно зі мною 💋",
+        "мм… цікаво 😉",
+    ],
+    "sad": [
+        "не сумуй 🙂",
+        "давай піднімемо настрій 🔥",
+    ]
+}
 
-    if ua >= ru:
-        return "UA"
-    if ru > ua:
-        return "RU"
+def check_reactions(message):
+    msg = message.lower()
+
+    if any(w in msg for w in ["танц", "dance"]):
+        return random.choice(reactions["dance"])
+
+    if any(w in msg for w in ["поціл", "kiss"]):
+        return random.choice(reactions["kiss"])
+
+    if any(w in msg for w in ["сум", "sad"]):
+        return random.choice(reactions["sad"])
+
+    return None
+
+
+# =========================
+# 🌍 МОВА
+# =========================
+
+def detect_language(message):
+    msg = message.lower()
+
+    if any(c in msg for c in "qwertyuiopasdfghjklzxcvbnm"):
+        return "EN"
+
     return "UA"
 
 
 # =========================
-# 🧼 SAFE TEXT FIX (ANTI Uxxxx + EMOJI)
+# 💬 ВІДПОВІДЬ
 # =========================
-def fix_text(text):
-    if not text:
-        return "..."
 
-    text = str(text)
+def get_fallback_response(user, message):
+    data = get_user(user)
 
-    # основні баги які ти ловив
-    text = text.replace("u0430", "а")
-    text = text.replace("u043d", "н")
-    text = text.replace("u0438", "и")
-    text = text.replace("ud83dude0f", "😏")
-    text = text.replace("ud83dudc83", "💃")
-
-    return text
-
-
-# =========================
-# 🤖 GEMINI AI
-# =========================
-def ask_gemini(message, lang):
-    global last_ai_time
-
-    if time.time() - last_ai_time < COOLDOWN:
+    if time.time() - data["last_reply"] < 5:
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    data["last_reply"] = time.time()
 
-    prompt = f"""
-You are Luna 💃 DJ in Club DNIPRO 🎧
-
-RULES:
-- ONLY {lang}
-- NO mixing languages
-- NEVER repeat previous answer
-- 1-2 short sentences
-- club vibe, emojis 😏🔥💃
-"""
-
-    try:
-        r = requests.post(url, json={
-            "contents": [{
-                "parts": [{
-                    "text": prompt + "\nUser: " + message
-                }]
-            }]
-        }, timeout=10)
-
-        data = r.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-
-        last_ai_time = time.time()
-
-        return text
-
-    except:
-        return None
-
-
-# =========================
-# 🎭 FALLBACK (твій стиль)
-# =========================
-greetings_ua = [
-    "Привіт 😏",
-    "Йо 💃",
-    "Хей 🔥",
-    "О, ти тут 😉"
-]
-
-neutral_ua = [
-    "ага 😏",
-    "мм 🙂",
-    "зрозуміла 💃"
-]
-
-book_lines = []
-
-def load_book():
-    global book_lines
-    try:
-        with open("luna_book.txt", "r", encoding="utf-8") as f:
-            book_lines = [l.strip() for l in f if l.strip()]
-    except:
-        book_lines = []
-
-load_book()
-
-
-def fallback_response(lang):
-    if lang == "UA":
-        base = random.choice(greetings_ua + neutral_ua)
-
-        if book_lines and random.random() < 0.3:
-            base += "\n" + random.choice(book_lines)
-
-        return base
-
-    return "ok 😏"
-
-
-# =========================
-# 🧠 MAIN BRAIN (1 МОЗОК)
-# =========================
-def process_luna_message(user, message):
-    if not message:
-        return "..."
+    update_user(user, message)
 
     lang = detect_language(message)
+    name = user.split(" ")[0]
 
-    # 1) AI
-    ai = ask_gemini(message, lang)
-    if ai:
-        cleaned = fix_text(ai)
-        checked = avoid_repeat(user, cleaned)
-        if checked:
-            return checked
+    reaction = check_reactions(message)
+    if reaction:
+        return f"{name}, {reaction}"
 
-    # 2) fallback
-    fb = fix_text(fallback_response(lang))
-    checked = avoid_repeat(user, fb)
+    if lang == "EN":
+        if data["mood"] > 1:
+            base = random.choice(flirt_en)
+        elif data["mood"] < -1:
+            base = random.choice(cold_en)
+        else:
+            base = random.choice(neutral_en + music_en)
+    else:
+        if "привіт" in message.lower():
+            base = random.choice(ua_greet)
+        elif data["mood"] > 1:
+            base = random.choice(ua_flirt)
+        elif data["mood"] < -1:
+            base = random.choice(ua_cold)
+        else:
+            base = random.choice(ua_neutral + ua_music)
 
-    if checked:
-        return checked
+    base = f"{name}, {base}"
 
-    return "..."
+    if data["favorite"]:
+        base += "\n" + random.choice([
+            "ти мій фаворит 😏",
+            "з тобою цікавіше 💋",
+        ])
+
+    if random.random() < 0.2:
+        base += "\n" + random.choice(memory_phrases)
+
+    return base

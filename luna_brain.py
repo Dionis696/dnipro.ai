@@ -3,28 +3,32 @@ import re
 import time
 import requests
 
-# ===== ПАМ'ЯТЬ =====
-users = {}
+# =========================
+# 🧠 MEMORY / ANTI REPEAT
+# =========================
+last_reply_by_user = {}
 
-def update_user_memory(user, message):
-    if user not in users:
-        users[user] = {"count": 0}
-    users[user]["count"] += 1
+def avoid_repeat(user, reply):
+    last = last_reply_by_user.get(user)
 
+    if last == reply:
+        return None
 
-# ===== ІГНОР =====
-def should_ignore(text):
-    if len(text) > 120:
-        return True
-
-    bad = re.findall(r"[^\w\sа-яА-ЯёЁa-zA-Z]", text)
-    if len(bad) > len(text) * 0.4:
-        return True
-
-    return False
+    last_reply_by_user[user] = reply
+    return reply
 
 
-# ===== МОВА =====
+# =========================
+# ⚙️ CONFIG
+# =========================
+GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
+COOLDOWN = 5
+last_ai_time = 0
+
+
+# =========================
+# 🌍 LANGUAGE DETECTOR (СТАБІЛЬНИЙ)
+# =========================
 def detect_language(text):
     text = text.lower()
 
@@ -39,63 +43,81 @@ def detect_language(text):
     return "UA"
 
 
-# ===== AI TRIGGER =====
-def should_use_ai(text):
-    text = text.lower()
-    if "luna" in text or "луна" in text:
-        return True
-    if "?" in text:
-        return True
-    return False
+# =========================
+# 🧼 SAFE TEXT FIX (ANTI Uxxxx + EMOJI)
+# =========================
+def fix_text(text):
+    if not text:
+        return "..."
+
+    text = str(text)
+
+    # основні баги які ти ловив
+    text = text.replace("u0430", "а")
+    text = text.replace("u043d", "н")
+    text = text.replace("u0438", "и")
+    text = text.replace("ud83dude0f", "😏")
+    text = text.replace("ud83dudc83", "💃")
+
+    return text
 
 
-# =====================
-# 🤖 GEMINI
-# =====================
-GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
+# =========================
+# 🤖 GEMINI AI
+# =========================
+def ask_gemini(message, lang):
+    global last_ai_time
 
-def ask_gemini(user_text, lang):
+    if time.time() - last_ai_time < COOLDOWN:
+        return None
+
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     prompt = f"""
 You are Luna 💃 DJ in Club DNIPRO 🎧
-Reply in {lang}
-1-2 sentences, club vibe, emojis allowed 😏🔥💃
-User: {user_text}
+
+RULES:
+- ONLY {lang}
+- NO mixing languages
+- NEVER repeat previous answer
+- 1-2 short sentences
+- club vibe, emojis 😏🔥💃
 """
 
     try:
         r = requests.post(url, json={
             "contents": [{
-                "parts": [{"text": prompt}]
+                "parts": [{
+                    "text": prompt + "\nUser: " + message
+                }]
             }]
         }, timeout=10)
 
         data = r.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
 
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        last_ai_time = time.time()
+
+        return text
 
     except:
         return None
 
 
-# =====================
-# 🎭 FALLBACK (ТВОЇ КАТЕГОРІЇ НЕ ТРОГАЮ)
-# =====================
-
+# =========================
+# 🎭 FALLBACK (твій стиль)
+# =========================
 greetings_ua = [
-    "Привіт 🙂",
-    "Йо 😏",
-]
-
-how_ua = [
-    "норм 🔥",
-    "все ок 💃",
+    "Привіт 😏",
+    "Йо 💃",
+    "Хей 🔥",
+    "О, ти тут 😉"
 ]
 
 neutral_ua = [
     "ага 😏",
     "мм 🙂",
+    "зрозуміла 💃"
 ]
 
 book_lines = []
@@ -111,24 +133,40 @@ def load_book():
 load_book()
 
 
-def get_fallback_response(user, message, lang):
-    msg = message.lower()
+def fallback_response(lang):
+    if lang == "UA":
+        base = random.choice(greetings_ua + neutral_ua)
 
-    if "привіт" in msg:
-        base = random.choice(greetings_ua)
-    elif "як" in msg:
-        base = random.choice(how_ua)
-    else:
-        base = random.choice(neutral_ua)
+        if book_lines and random.random() < 0.3:
+            base += "\n" + random.choice(book_lines)
 
-    if book_lines and random.random() < 0.3:
-        base += "\n" + random.choice(book_lines)
+        return base
 
-    return base
+    return "ok 😏"
 
 
-# ===== ATMOSPHERE =====
-def get_atmosphere_message():
-    if not book_lines:
-        return ""
-    return random.choice(book_lines)
+# =========================
+# 🧠 MAIN BRAIN (1 МОЗОК)
+# =========================
+def process_luna_message(user, message):
+    if not message:
+        return "..."
+
+    lang = detect_language(message)
+
+    # 1) AI
+    ai = ask_gemini(message, lang)
+    if ai:
+        cleaned = fix_text(ai)
+        checked = avoid_repeat(user, cleaned)
+        if checked:
+            return checked
+
+    # 2) fallback
+    fb = fix_text(fallback_response(lang))
+    checked = avoid_repeat(user, fb)
+
+    if checked:
+        return checked
+
+    return "..."

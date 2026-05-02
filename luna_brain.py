@@ -1,95 +1,84 @@
-import requests
+import random
 import time
-import json
-from flask import Flask, request, Response
-from luna_brain import get_fallback_response
 
-app = Flask(__name__)
+users = {}
 
-GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
-MODEL = "models/gemini-2.5-flash"
+def get_user(user):
+    if user not in users:
+        users[user] = {
+            "count": 0,
+            "mood": 0,
+            "favorite": False,
+            "last_reply": 0
+        }
+    return users[user]
 
-last_api_call = 0
+
+def update_user(user, message):
+    data = get_user(user)
+
+    data["count"] += 1
+
+    msg = message.lower()
+
+    if any(w in msg for w in ["круто", "love", "клас"]):
+        data["mood"] += 1
+
+    if any(w in msg for w in ["погано", "фігня"]):
+        data["mood"] -= 1
+
+    if data["count"] > 10 and data["mood"] > 1:
+        data["favorite"] = True
 
 
-def ask_gemini(message):
-    global last_api_call
+ua = [
+    "мм цікаво 🙂",
+    "ну ти даєш 😄",
+    "є щось в цьому 😏",
+    "давай трохи драйву 💃",
+]
 
-    # антиспам
-    if time.time() - last_api_call < 2:
+ua_flirt = [
+    "ти сьогодні цікавий 😏",
+    "мені подобається як ти пишеш 😉",
+]
+
+ua_greet = [
+    "Привіт 🙂",
+    "Йо 😎",
+]
+
+memory = [
+    "я тебе пам’ятаю 😉",
+    "ти тут не вперше 😏",
+]
+
+
+def get_fallback_response(user, message):
+    data = get_user(user)
+
+    if time.time() - data["last_reply"] < 4:
         return None
 
-    last_api_call = time.time()
+    data["last_reply"] = time.time()
 
-    # стиль Luna (щоб не писала "я мовна модель")
-    message = "Ти дівчина Luna, відповідаєш коротко, живо, як людина, інколи з фліртом. Не кажи що ти AI.\n" + message
+    update_user(user, message)
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={GEMINI_API_KEY}"
+    name = user.split(" ")[0]
 
-    payload = {
-        "contents": [
-            {"parts": [{"text": message}]}
-        ]
-    }
+    if "привіт" in message.lower():
+        base = random.choice(ua_greet)
+    elif data["mood"] > 1:
+        base = random.choice(ua_flirt)
+    else:
+        base = random.choice(ua)
 
-    try:
-        r = requests.post(url, json=payload, timeout=10)
+    text = f"{name}, {base}"
 
-        if r.status_code != 200:
-            print("Gemini error:", r.text)
-            return None
+    if data["favorite"]:
+        text += "\nти мені подобаєшся 😏"
 
-        data = r.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
+    if random.random() < 0.2:
+        text += "\n" + random.choice(memory)
 
-        # фільтр кривих відповідей
-        if not text or len(text.strip()) < 2:
-            return None
-
-        return text.strip()
-
-    except Exception as e:
-        print("Gemini exception:", e)
-        return None
-
-
-def make_json(reply_text):
-    return Response(
-        json.dumps({"reply": reply_text}, ensure_ascii=False),
-        content_type="application/json; charset=utf-8"
-    )
-
-
-@app.route('/')
-def home():
-    return "Luna + Gemini OK 🔥"
-
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    data = request.json
-
-    user = data.get("user", "User")
-    message = data.get("message", "")
-
-    # ігнор мусорних символів
-    if not any(c.isalnum() for c in message):
-        return make_json("")
-
-    # ===== GEMINI =====
-    ai_reply = ask_gemini(message)
-
-    if ai_reply:
-        return make_json(ai_reply)
-
-    # ===== FALLBACK =====
-    fallback = get_fallback_response(user, message)
-
-    if fallback:
-        return make_json(fallback)
-
-    return make_json("")
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    return text

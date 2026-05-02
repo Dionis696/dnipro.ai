@@ -1,9 +1,5 @@
 from flask import Flask, request, jsonify
-import requests
-import time
 import random
-import json
-import codecs
 
 from luna_brain import (
     should_ignore,
@@ -11,111 +7,64 @@ from luna_brain import (
     should_use_ai,
     get_fallback_response,
     get_atmosphere_message,
-    update_user_memory
+    update_user_memory,
+    ask_gemini
 )
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False
 
-GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
-
-last_request_time = 0
-COOLDOWN = 5
+# 🔥 ФІКС UTF (ОСНОВНА ПРОБЛЕМА ТВОЯ)
+app.config["JSON_AS_ASCII"] = False
 
 
-# ===== 🔥 FIX TEXT (UTF + EMOJI SAFE) =====
-def fix_text(text):
+# =====================
+# 🧼 SAFE CLEAN (ДУЖЕ ВАЖЛИВО)
+# =====================
+def safe(text):
     if not text:
         return "..."
 
-    try:
-        if isinstance(text, bytes):
-            text = text.decode("utf-8", errors="ignore")
-
-        text = codecs.decode(text, "unicode_escape")
-
-        try:
-            text = text.encode("latin1").decode("utf-8")
-        except:
-            pass
-
-        return json.loads(json.dumps(text, ensure_ascii=False))
-
-    except:
-        return text
+    return str(text) \
+        .replace("\\u", "u") \
+        .replace("u0430", "а") \
+        .replace("u043d", "н") \
+        .replace("u0438", "и")
 
 
-# ===== 🤖 GEMINI =====
-def ask_gemini(user_text, lang):
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-
-    prompt = f"""
-You are Luna 💃 DJ girl in Club DNIPRO 🎧
-
-RULES:
-- Always answer in {lang}
-- Never switch language
-- 1-2 sentences max
-- Club vibe, playful
-- Emojis allowed 😏🔥💃🎶
-
-User: {user_text}
-"""
-
-    data = {
-        "contents": [
-            {"parts": [{"text": prompt}]}
-        ]
-    }
-
-    try:
-        r = requests.post(url, json=data, timeout=15)
-        result = r.json()
-
-        text = result["candidates"][0]["content"]["parts"][0]["text"]
-        return fix_text(text)
-
-    except:
-        return None
-
-
-# ===== 💬 CHAT =====
+# =====================
+# 💬 CHAT
+# =====================
 @app.route('/chat', methods=['POST'])
 def chat():
-    global last_request_time
+    data = request.json or {}
 
-    data = request.json
     user = data.get("user", "user")
     message = data.get("message", "")
 
     if should_ignore(message):
-        return jsonify({"reply": "напиши простіше 😏"})
+        return jsonify({"reply": "..."})
 
     update_user_memory(user, message)
 
     lang = detect_language(message)
     use_ai = should_use_ai(message)
 
-    now = time.time()
+    reply = None
 
-    # ===== AI =====
-    if use_ai and (now - last_request_time > COOLDOWN):
-        ai_reply = ask_gemini(message, lang)
+    # 🤖 AI
+    if use_ai:
+        reply = ask_gemini(message, lang)
 
-        if ai_reply:
-            last_request_time = now
-            return jsonify({"reply": fix_text(ai_reply)})
+    # 🎭 FALLBACK
+    if not reply:
+        reply = get_fallback_response(user, message, lang)
 
-    # ===== FALLBACK =====
-    reply = fix_text(get_fallback_response(user, message, lang))
+    # 🎧 ATMOSPHERE
+    if random.random() < 0.1:
+        reply += "\n" + get_atmosphere_message()
 
-    # ===== ATMOSPHERE =====
-    if random.random() < 0.12:
-        reply += "\n" + fix_text(get_atmosphere_message())
-
-    return jsonify({"reply": reply})
+    return jsonify({"reply": safe(reply)})
 
 
-# ===== RUN =====
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)

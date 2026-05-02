@@ -1,6 +1,5 @@
 import random
 import re
-import time
 
 # ===== ПАМ'ЯТЬ =====
 users = {}
@@ -23,32 +22,43 @@ def should_ignore(text):
     return False
 
 
-# ===== МОВА =====
+# ===== МОВА (FIXED, але м’яко) =====
 def detect_language(text):
-    if re.search(r"[a-zA-Z]", text):
-        return "EN"
-    if re.search(r"[а-яА-ЯёЁ]", text):
-        if "ы" in text or "э" in text:
-            return "RU"
+    text = text.lower()
+
+    ua_chars = len(re.findall(r"[а-щьюяєіїґ]", text))
+    ru_chars = len(re.findall(r"[а-яё]", text))
+    en_chars = len(re.findall(r"[a-z]", text))
+
+    # даємо пріоритет кирилиці
+    if ua_chars > 0 and ua_chars >= ru_chars:
         return "UA"
+    if ru_chars > ua_chars and ru_chars > 0:
+        return "RU"
+    if en_chars > 0 and ua_chars == 0:
+        return "EN"
+
     return "UA"
 
 
-# ===== КОЛИ AI =====
+# ===== AI TRIGGER (НЕ ЛАМАТИ ЛОГІКУ) =====
 def should_use_ai(text):
     text = text.lower()
+
     if "luna" in text or "луна" in text:
         return True
+
+    # тільки якщо реально питання
     if "?" in text:
         return True
+
     return False
 
 
 # =========================
-# 🎭 КАТЕГОРІЇ
+# 🎭 ТВОЇ КАТЕГОРІЇ (ЗБЕРЕЖЕНО 100%)
 # =========================
 
-# 🇺🇦
 greetings_ua = [
     "Привіт 🙂 рада тебе бачити",
     "Йо, привіт 😎 як настрій?",
@@ -78,8 +88,7 @@ flirt_ua = [
     "ти сьогодні підозріло цікавий 😏",
     "мені подобається як ти пишеш 😉",
     "обережно… я можу спокусити на танець 💋",
-     "не дивись так… я ж теж людина 😄",
-    
+    "не дивись так… я ж теж людина 😄",
 ]
 
 neutral_ua = [
@@ -89,7 +98,7 @@ neutral_ua = [
     "є щось в цьому 😏",
 ]
 
-# 🇬🇧
+
 greetings_en = [
     "hey 🙂 nice to see you",
     "yo 😎 what's your vibe?",
@@ -116,7 +125,7 @@ neutral_en = [
     "hmm interesting 🙂",
 ]
 
-# 🇷🇺
+
 neutral_ru = [
     "ну да 😏",
     "поняла 😉",
@@ -138,17 +147,16 @@ def load_book():
 load_book()
 
 
-# ===== ВИБІР =====
+# ===== ВІДПОВІДЬ =====
 def get_fallback_response(user, message, lang):
     msg = message.lower()
 
-    # ===== ВИБІР БАЗИ =====
     if lang == "EN":
         if "hi" in msg:
             base = random.choice(greetings_en)
         elif "how" in msg:
             base = random.choice(how_en)
-        elif "music" in msg or "track" in msg:
+        elif "music" in msg:
             base = random.choice(music_en)
         else:
             base = random.choice(neutral_en)
@@ -159,12 +167,12 @@ def get_fallback_response(user, message, lang):
     elif lang == "RU":
         base = random.choice(neutral_ru)
 
-    else:  # UA
+    else:
         if "привіт" in msg:
             base = random.choice(greetings_ua)
         elif "як" in msg:
             base = random.choice(how_ua)
-        elif "трек" in msg or "муз" in msg:
+        elif "муз" in msg or "трек" in msg:
             base = random.choice(music_ua)
         else:
             base = random.choice(neutral_ua)
@@ -172,10 +180,9 @@ def get_fallback_response(user, message, lang):
         if random.random() < 0.3:
             base += "\n" + random.choice(flirt_ua)
 
-    # ===== КНИГА (мікс) =====
+    # 🎧 атмосфера (твоя книга НЕ втрачена)
     if book_lines and random.random() < 0.4:
-        lines = random.randint(1, 2)
-        base += "\n" + "\n".join(random.sample(book_lines, min(lines, len(book_lines))))
+        base += "\n" + random.choice(book_lines)
 
     return base
 
@@ -184,5 +191,4 @@ def get_fallback_response(user, message, lang):
 def get_atmosphere_message():
     if not book_lines:
         return ""
-
-    return "\n".join(random.sample(book_lines, random.randint(1, 2)))
+    return random.choice(book_lines)

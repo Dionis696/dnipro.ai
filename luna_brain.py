@@ -1,106 +1,174 @@
 import random
+import re
+import time
 
-# 🔹 Категорії відповідей
+# ===== ПАМ'ЯТЬ =====
+users = {}
 
-greetings = [
+def update_user_memory(user, message):
+    if user not in users:
+        users[user] = {"count": 0}
+    users[user]["count"] += 1
+
+
+# ===== ІГНОР =====
+def should_ignore(text):
+    if len(text) > 120:
+        return True
+
+    bad = re.findall(r"[^\w\sа-яА-ЯёЁa-zA-Z]", text)
+    if len(bad) > len(text) * 0.4:
+        return True
+
+    return False
+
+
+# ===== МОВА =====
+def detect_language(text):
+    if re.search(r"[a-zA-Z]", text):
+        return "EN"
+    if re.search(r"[а-яА-ЯёЁ]", text):
+        if "ы" in text or "э" in text:
+            return "RU"
+        return "UA"
+    return "UA"
+
+
+# ===== КОЛИ AI =====
+def should_use_ai(text):
+    text = text.lower()
+    if "luna" in text or "луна" in text:
+        return True
+    if "?" in text:
+        return True
+    return False
+
+
+# =========================
+# 🎭 КАТЕГОРІЇ
+# =========================
+
+# 🇺🇦
+greetings_ua = [
     "Привіт 🙂 рада тебе бачити",
     "Йо, привіт 😎 як настрій?",
     "Привіт, заходь не стій 😉",
 ]
 
-how_are_you = [
+how_ua = [
     "Та нормально, ловлю вайб 😏 а ти як?",
-    "Все ок, трохи музики і настрій топ 🔥",
-    "Живу, кайфую 😉",
+    "Все ок, музика качає 🔥",
 ]
 
-music = [
-    "мм щось з 2000-х зараз би зайшло 😏",
-    "може щось танцювальне включимо? 💃",
-    "я б зараз щось з басом поставила 🔥",
+music_ua = [
+    "щось з басом зараз би зайшло 😏",
+    "давай качнемо танцпол 💃",
 ]
 
-flirt = [
+flirt_ua = [
     "ти сьогодні підозріло цікавий 😏",
-    "обережно… я можу спокусити на танець 💋",
     "мені подобається як ти пишеш 😉",
 ]
 
-fallback = [
-    "ага, зрозуміла 🙂",
-    "мм цікаво 😏",
-    "ну ти даєш 😄",
-    "є щось в цьому 😉",
+neutral_ua = [
+    "ага, зрозуміла 😉",
+    "мм цікаво 🙂",
 ]
 
-stories = [
-    "пам’ятаю якось у клубі всі казали 'на 5 хв зайшли'… і пропали до ранку 😄",
-    "був вечір, коли музика так качала що навіть бармен танцював 😂",
+# 🇬🇧
+greetings_en = [
+    "hey 🙂 nice to see you",
+    "yo 😎 what's your vibe?",
+    "hi there 😉 don't just stand, join in",
 ]
 
-dance = [
-    "ну що, хто на танцпол? 💃🔥",
-    "пішли танцювати, не сиди 😏",
+how_en = [
+    "I'm good 😏 just vibing, you?",
+    "all good, music hits 🔥",
+]
+
+music_en = [
+    "we need something with bass 😏",
+    "let’s make the floor move 💃",
+]
+
+flirt_en = [
+    "you're kinda interesting today 😏",
+    "careful… I might pull you to dance 💋",
+]
+
+neutral_en = [
+    "yeah 😉 got you",
+    "hmm interesting 🙂",
+]
+
+# 🇷🇺
+neutral_ru = [
+    "ну да 😏",
+    "поняла 😉",
+    "интересно 🙂",
 ]
 
 
-# 🔹 Визначення категорії
-def detect_category(msg):
-    msg = msg.lower()
+# ===== КНИГА =====
+book_lines = []
 
-    if "привіт" in msg:
-        return "greetings"
-    if "як справ" in msg:
-        return "how"
-    if "трек" in msg or "муз" in msg:
-        return "music"
+def load_book():
+    global book_lines
+    try:
+        with open("luna_book.txt", "r", encoding="utf-8") as f:
+            book_lines = [line.strip() for line in f if line.strip()]
+    except:
+        book_lines = []
 
-    return "fallback"
-
-
-# 🔹 Визначення мови
-def detect_lang(msg):
-    msg = msg.lower()
-
-    if any(word in msg for word in ["how", "hello", "hi"]):
-        return "en"
-    if any(word in msg for word in ["как", "привет"]):
-        return "ru"
-
-    return "ua"
+load_book()
 
 
-# 🔹 Генерація відповіді
-def get_reply(msg):
-    cat = detect_category(msg)
+# ===== ВИБІР =====
+def get_fallback_response(user, message, lang):
+    msg = message.lower()
 
-    if cat == "greetings":
-        base = greetings
-    elif cat == "how":
-        base = how_are_you
-    elif cat == "music":
-        base = music
-    else:
-        base = fallback
+    # ===== ВИБІР БАЗИ =====
+    if lang == "EN":
+        if "hi" in msg:
+            base = random.choice(greetings_en)
+        elif "how" in msg:
+            base = random.choice(how_en)
+        elif "music" in msg or "track" in msg:
+            base = random.choice(music_en)
+        else:
+            base = random.choice(neutral_en)
 
-    reply = random.choice(base)
+        if random.random() < 0.3:
+            base += "\n" + random.choice(flirt_en)
 
-    # 😏 іноді додаємо флірт
-    if random.random() < 0.2:
-        reply += " " + random.choice(flirt)
+    elif lang == "RU":
+        base = random.choice(neutral_ru)
 
-    return reply
+    else:  # UA
+        if "привіт" in msg:
+            base = random.choice(greetings_ua)
+        elif "як" in msg:
+            base = random.choice(how_ua)
+        elif "трек" in msg or "муз" in msg:
+            base = random.choice(music_ua)
+        else:
+            base = random.choice(neutral_ua)
+
+        if random.random() < 0.3:
+            base += "\n" + random.choice(flirt_ua)
+
+    # ===== КНИГА (мікс) =====
+    if book_lines and random.random() < 0.4:
+        lines = random.randint(1, 2)
+        base += "\n" + "\n".join(random.sample(book_lines, min(lines, len(book_lines))))
+
+    return base
 
 
-# 🔹 Іноді історія
-def maybe_story():
-    if random.random() < 0.1:
-        return random.choice(stories)
-    return None
+# ===== АТМОСФЕРА =====
+def get_atmosphere_message():
+    if not book_lines:
+        return ""
 
-
-# 🔹 Іноді танці
-def maybe_dance():
-    if random.random() < 0.15:
-        return random.choice(dance)
-    return None
+    return "\n".join(random.sample(book_lines, random.randint(1, 2)))

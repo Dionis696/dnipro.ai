@@ -3,6 +3,8 @@ import requests
 import time
 import random
 import re
+import json
+import codecs
 
 from luna_brain import (
     should_ignore,
@@ -15,10 +17,24 @@ from luna_brain import (
 
 app = Flask(__name__)
 
+# 🔥 FIX UTF-8 ДЛЯ SECOND LIFE
+app.config['JSON_AS_ASCII'] = False
+
 GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
 
 last_request_time = 0
 COOLDOWN = 6  # секунд між AI запитами
+
+
+# ===== FIX TEXT (ГОЛОВНЕ ВИПРАВЛЕННЯ) =====
+def fix_text(text):
+    if not text:
+        return text
+    try:
+        return codecs.decode(text, "unicode_escape")
+    except:
+        return text
+
 
 # ===== GEMINI =====
 def ask_gemini(user_text, lang):
@@ -48,7 +64,8 @@ User: {user_text}
         r = requests.post(url, json=data)
         result = r.json()
 
-        return result["candidates"][0]["content"]["parts"][0]["text"]
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
+        return fix_text(text)
 
     except:
         return None
@@ -63,17 +80,17 @@ def chat():
     user = data.get("user", "user")
     message = data.get("message", "")
 
-    # ❌ ігнор сміття
+    # ❌ ignore spam
     if should_ignore(message):
         return jsonify({"reply": ""})
 
-    # 🧠 пам’ять
+    # 🧠 memory
     update_user_memory(user, message)
 
-    # 🌍 мова
+    # 🌍 language
     lang = detect_language(message)
 
-    # 🤖 чи викликати AI
+    # 🤖 AI decision
     use_ai = should_use_ai(message)
 
     now = time.time()
@@ -87,11 +104,11 @@ def chat():
             return jsonify({"reply": ai_reply})
 
     # ===== FALLBACK =====
-    reply = get_fallback_response(user, message, lang)
+    reply = fix_text(get_fallback_response(user, message, lang))
 
-    # 🎧 іноді атмосфера
+    # 🎧 atmosphere
     if random.random() < 0.08:
-        reply += "\n" + get_atmosphere_message()
+        reply += "\n" + fix_text(get_atmosphere_message())
 
     return jsonify({"reply": reply})
 

@@ -1,7 +1,6 @@
 import random
 import time
 
-# памʼять користувачів
 users = {}
 
 def get_user(user):
@@ -10,7 +9,8 @@ def get_user(user):
             "count": 0,
             "mood": 0,
             "favorite": False,
-            "last_reply": 0
+            "last_reply": 0,
+            "last_message": ""
         }
     return users[user]
 
@@ -19,6 +19,7 @@ def update_user(user, message):
     data = get_user(user)
 
     data["count"] += 1
+    data["last_message"] = message.lower()
 
     msg = message.lower()
 
@@ -32,22 +33,36 @@ def update_user(user, message):
         data["favorite"] = True
 
 
-# фрази
-ua = [
-    "мм цікаво 🙂",
+# 🔥 БІЛЬШЕ ФРАЗ
+ua_neutral = [
     "ну ти даєш 😄",
     "є щось в цьому 😏",
-    "давай трохи драйву 💃",
+    "звучить цікаво 😉",
+    "ага, вже краще 😎",
+]
+
+ua_fun = [
+    "давай качнемо атмосферу 💃🔥",
+    "музика вже проситься голосніше 🎧",
+    "я б зараз такий трек поставила… 😏",
 ]
 
 ua_flirt = [
-    "ти сьогодні цікавий 😏",
-    "мені подобається як ти пишеш 😉",
+    "ти сьогодні прям заряджаєш 😏",
+    "мені подобається як ти думаєш 😉",
+    "обережно… я можу втягнути тебе в ніч 💋",
 ]
 
 ua_greet = [
-    "Привіт 🙂",
-    "Йо 😎",
+    "Привіт 🙂 рада тебе бачити",
+    "Йо 😎 ти якраз в тему",
+    "О, з’явився 😏",
+]
+
+ua_question = [
+    "а ти як думаєш? 😉",
+    "ну і що будемо робити далі? 😏",
+    "розкажеш більше? 🙂",
 ]
 
 memory = [
@@ -56,11 +71,32 @@ memory = [
 ]
 
 
+# 🔥 АНАЛІЗ ПОВІДОМЛЕННЯ
+def analyze(message):
+    msg = message.lower()
+
+    if "привіт" in msg:
+        return "greet"
+
+    if "як справи" in msg or "як ти" in msg:
+        return "how"
+
+    if "шо" in msg or "що" in msg:
+        return "question"
+
+    if "давай" in msg:
+        return "action"
+
+    if "ти тут" in msg:
+        return "presence"
+
+    return "normal"
+
+
 def get_fallback_response(user, message):
     data = get_user(user)
 
-    # антиспам
-    if time.time() - data["last_reply"] < 4:
+    if time.time() - data["last_reply"] < 3:
         return None
 
     data["last_reply"] = time.time()
@@ -68,20 +104,46 @@ def get_fallback_response(user, message):
     update_user(user, message)
 
     name = user.split(" ")[0]
+    intent = analyze(message)
 
-    if "привіт" in message.lower():
+    # 🔥 ЛОГІКА
+    if intent == "greet":
         base = random.choice(ua_greet)
-    elif data["mood"] > 1:
-        base = random.choice(ua_flirt)
+
+    elif intent == "how":
+        base = random.choice([
+            "та нормально, ловлю вайб 😏",
+            "живу, кайфую 😉",
+            "все ок, музика рятує 🎧",
+        ])
+
+    elif intent == "question":
+        base = random.choice(ua_question)
+
+    elif intent == "action":
+        base = random.choice(ua_fun)
+
+    elif intent == "presence":
+        base = random.choice([
+            "я тут, не зникаю 😏",
+            "звісно тут 😉",
+            "я ж нікуди не йду 😎",
+        ])
+
     else:
-        base = random.choice(ua)
+        if data["mood"] > 1:
+            base = random.choice(ua_flirt)
+        else:
+            base = random.choice(ua_neutral + ua_fun)
 
     text = f"{name}, {base}"
 
+    # фаворит
     if data["favorite"]:
         text += "\nти мені подобаєшся 😏"
 
-    if random.random() < 0.2:
+    # памʼять
+    if random.random() < 0.15:
         text += "\n" + random.choice(memory)
 
     return text

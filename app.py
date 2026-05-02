@@ -1,88 +1,118 @@
+from flask import Flask, request, jsonify
 import requests
 import time
-from flask import Flask, request, jsonify
-from luna_brain import get_fallback_response
+import random
+import json
+import codecs
+
+from luna_brain import (
+    should_ignore,
+    detect_language,
+    should_use_ai,
+    get_fallback_response,
+    get_atmosphere_message,
+    update_user_memory
+)
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 
-GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
-MODEL = "models/gemini-2.5-flash"
+GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
 
-last_api_call = 0
+last_request_time = 0
+COOLDOWN = 6
 
-# =========================
-# 🚀 GEMINI
-# =========================
-def ask_gemini(message):
-    global last_api_call
 
-    # анти-спам (1 запит в 2 сек)
-    if time.time() - last_api_call < 2:
-        return None
+# ===== 🔥 STABLE TEXT FIX (FINAL VERSION) =====
+def fix_text(text):
+    if not text:
+        return text
+    try:
+        # 1. repair escaped unicode
+        if isinstance(text, bytes):
+            text = text.decode("utf-8", errors="ignore")
 
-    last_api_call = time.time()
+        text = codecs.decode(text, "unicode_escape")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={GEMINI_API_KEY}"
+        # 2. final safety pass
+        return text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
 
-    payload = {
+    except:
+        return text
+
+
+# ===== 🎧 GEMINI =====
+def ask_gemini(user_text, lang):
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+    prompt = f"""
+You are Luna — DJ girl in Club DNIPRO 💃🎧
+Style: playful, club vibe, short (1-2 sentences max)
+Add emojis sometimes 😏🔥💃🎶
+
+Language: {lang}
+
+User: {user_text}
+"""
+
+    data = {
         "contents": [
             {
                 "parts": [
-                    {"text": message}
+                    {"text": prompt}
                 ]
             }
         ]
     }
 
     try:
-        r = requests.post(url, json=payload, timeout=10)
+        r = requests.post(url, json=data, timeout=15)
+        result = r.json()
 
-        if r.status_code != 200:
-            print("Gemini error:", r.text)
-            return None
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
+        return fix_text(text)
 
-        data = r.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-
-    except Exception as e:
-        print("Gemini exception:", e)
+    except:
         return None
 
 
-# =========================
-# 🌐 ROUTES
-# =========================
-
-@app.route('/')
-def home():
-    return "Luna + Gemini працює 🔥"
-
-
+# ===== 💬 CHAT =====
 @app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json
+    global last_request_time
 
-    user = data.get("user", "User")
+    data = request.json
+    user = data.get("user", "user")
     message = data.get("message", "")
 
-    # ❌ ігнор мусор
-    if not any(c.isalnum() for c in message):
+    if should_ignore(message):
         return jsonify({"reply": ""})
 
-    # ===== GEMINI =====
-    ai_reply = ask_gemini(message)
+    update_user_memory(user, message)
 
-    if ai_reply:
-        return jsonify({"reply": ai_reply})
+    lang = detect_language(message)
+    use_ai = should_use_ai(message)
 
-    # ===== FALLBACK =====
-    fallback = get_fallback_response(user, message)
+    now = time.time()
 
-    if not fallback:
-        return jsonify({"reply": ""})
+    # ===== 🤖 GEMINI =====
+    if use_ai and (now - last_request_time > COOLDOWN):
+        ai_reply = ask_gemini(message, lang)
 
-    return jsonify({"reply": fallback})
+        if ai_reply:
+            last_request_time = now
+            return jsonify({"reply": ai_reply})
+
+    # ===== 🎭 FALLBACK (LUNA STYLE) =====
+    reply = fix_text(get_fallback_response(user, message, lang))
+
+    # 🎧 atmosphere boost
+    if random.random() < 0.10:
+        reply += "\n" + fix_text(get_atmosphere_message())
+
+    return jsonify({"reply": reply})
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+# ===== RUN =====
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)

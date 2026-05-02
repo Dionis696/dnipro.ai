@@ -2,8 +2,6 @@ from flask import Flask, request, jsonify
 import requests
 import time
 import random
-import json
-import codecs
 
 from luna_brain import (
     should_ignore,
@@ -23,44 +21,34 @@ last_request_time = 0
 COOLDOWN = 6
 
 
-# ===== 🔥 STABLE TEXT FIX (FINAL VERSION) =====
+# ===== 🔥 FIX UTF-8 (ГОЛОВНЕ РІШЕННЯ) =====
 def fix_text(text):
     if not text:
         return text
     try:
-        # 1. repair escaped unicode
-        if isinstance(text, bytes):
-            text = text.decode("utf-8", errors="ignore")
-
-        text = codecs.decode(text, "unicode_escape")
-
-        # 2. final safety pass
-        return text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
-
+        # repair broken unicode like u00d0u00a5
+        return text.encode("raw_unicode_escape").decode("utf-8", errors="ignore")
     except:
         return text
 
 
-# ===== 🎧 GEMINI =====
+# ===== GEMINI =====
 def ask_gemini(user_text, lang):
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     prompt = f"""
-You are Luna — DJ girl in Club DNIPRO 💃🎧
-Style: playful, club vibe, short (1-2 sentences max)
+You are Luna 💃 DJ girl in Club DNIPRO 🎧
+Reply short (1-2 sentences), natural, playful.
 Add emojis sometimes 😏🔥💃🎶
 
 Language: {lang}
-
 User: {user_text}
 """
 
     data = {
         "contents": [
             {
-                "parts": [
-                    {"text": prompt}
-                ]
+                "parts": [{"text": prompt}]
             }
         ]
     }
@@ -76,7 +64,7 @@ User: {user_text}
         return None
 
 
-# ===== 💬 CHAT =====
+# ===== CHAT =====
 @app.route('/chat', methods=['POST'])
 def chat():
     global last_request_time
@@ -95,7 +83,7 @@ def chat():
 
     now = time.time()
 
-    # ===== 🤖 GEMINI =====
+    # ===== GEMINI =====
     if use_ai and (now - last_request_time > COOLDOWN):
         ai_reply = ask_gemini(message, lang)
 
@@ -103,10 +91,10 @@ def chat():
             last_request_time = now
             return jsonify({"reply": ai_reply})
 
-    # ===== 🎭 FALLBACK (LUNA STYLE) =====
+    # ===== FALLBACK =====
     reply = fix_text(get_fallback_response(user, message, lang))
 
-    # 🎧 atmosphere boost
+    # ===== ATMOSPHERE =====
     if random.random() < 0.10:
         reply += "\n" + fix_text(get_atmosphere_message())
 

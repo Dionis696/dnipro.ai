@@ -1,115 +1,88 @@
-from flask import Flask, request, jsonify
 import requests
 import time
-import random
-import json
-
-from luna_brain import (
-    should_ignore,
-    detect_language,
-    should_use_ai,
-    get_fallback_response,
-    get_atmosphere_message,
-    update_user_memory
-)
+from flask import Flask, request, jsonify
+from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-# 🔥 IMPORTANT: SL UTF-8 FIX
-app.config['JSON_AS_ASCII'] = False
+GEMINI_API_KEY = "ТУТ_ТВІЙ_API_KEY"
+MODEL = "models/gemini-2.5-flash"
 
-GEMINI_API_KEY = "ТУТ_ТВОЙ_API_KEY"
+last_api_call = 0
 
-last_request_time = 0
-COOLDOWN = 6
+# =========================
+# 🚀 GEMINI
+# =========================
+def ask_gemini(message):
+    global last_api_call
 
+    # анти-спам (1 запит в 2 сек)
+    if time.time() - last_api_call < 2:
+        return None
 
-# ===== 🔥 FIX UTF-8 / BROKEN ENCODING =====
-def fix_text(text):
-    if not text:
-        return text
-    try:
-        # FIX для u00d0u00a5 типу багів
-        return text.encode("latin1").decode("utf-8")
-    except:
-        return text
+    last_api_call = time.time()
 
+    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={GEMINI_API_KEY}"
 
-# ===== GEMINI =====
-def ask_gemini(user_text, lang):
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-
-    prompt = f"""
-You are Luna, a girl in a nightclub chat (Club DNIPRO).
-Reply short (1-2 sentences), natural, playful.
-
-Language: {lang}
-User: {user_text}
-"""
-
-    data = {
+    payload = {
         "contents": [
             {
                 "parts": [
-                    {"text": prompt}
+                    {"text": message}
                 ]
             }
         ]
     }
 
     try:
-        r = requests.post(url, json=data, timeout=10)
-        result = r.json()
+        r = requests.post(url, json=payload, timeout=10)
 
-        text = result["candidates"][0]["content"]["parts"][0]["text"]
-        return fix_text(text)
+        if r.status_code != 200:
+            print("Gemini error:", r.text)
+            return None
 
-    except:
+        data = r.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+    except Exception as e:
+        print("Gemini exception:", e)
         return None
 
 
-# ===== CHAT ENDPOINT =====
+# =========================
+# 🌐 ROUTES
+# =========================
+
+@app.route('/')
+def home():
+    return "Luna + Gemini працює 🔥"
+
+
 @app.route('/chat', methods=['POST'])
 def chat():
-    global last_request_time
-
     data = request.json
-    user = data.get("user", "user")
+
+    user = data.get("user", "User")
     message = data.get("message", "")
 
-    # ❌ ignore spam
-    if should_ignore(message):
+    # ❌ ігнор мусор
+    if not any(c.isalnum() for c in message):
         return jsonify({"reply": ""})
 
-    # 🧠 memory
-    update_user_memory(user, message)
-
-    # 🌍 language
-    lang = detect_language(message)
-
-    # 🤖 AI decision
-    use_ai = should_use_ai(message)
-
-    now = time.time()
-
     # ===== GEMINI =====
-    if use_ai and (now - last_request_time > COOLDOWN):
-        ai_reply = ask_gemini(message, lang)
+    ai_reply = ask_gemini(message)
 
-        if ai_reply:
-            last_request_time = now
-            return jsonify({"reply": ai_reply})
+    if ai_reply:
+        return jsonify({"reply": ai_reply})
 
     # ===== FALLBACK =====
-    reply = fix_text(get_fallback_response(user, message, lang))
+    fallback = get_fallback_response(user, message)
 
-    # 🎧 atmosphere (optional vibe)
-    if random.random() < 0.08:
-        reply += "\n" + fix_text(get_atmosphere_message())
+    if not fallback:
+        return jsonify({"reply": ""})
 
-    return jsonify({"reply": reply})
+    return jsonify({"reply": fallback})
 
 
-# ===== RUN =====
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)

@@ -6,144 +6,139 @@ users = {}
 def get_user(user):
     if user not in users:
         users[user] = {
-            "count": 0,
-            "mood": 0,
-            "favorite": False,
-            "last_reply": 0,
-            "last_message": ""
+            "last_reply": 0
         }
     return users[user]
 
 
-def update_user(user, message):
-    data = get_user(user)
+# 🌍 визначення мови
+def detect_lang(text):
+    t = text.lower()
 
-    data["count"] += 1
-    data["last_message"] = message.lower()
-
-    msg = message.lower()
-
-    if any(w in msg for w in ["круто", "love", "клас"]):
-        data["mood"] += 1
-
-    if any(w in msg for w in ["погано", "фігня"]):
-        data["mood"] -= 1
-
-    if data["count"] > 10 and data["mood"] > 1:
-        data["favorite"] = True
+    if any(w in t for w in ["hello", "what", "how", "do you", "write"]):
+        return "en"
+    if any(w in t for w in ["привет", "что", "как", "расскажи"]):
+        return "ru"
+    return "ua"
 
 
-# 🔥 БІЛЬШЕ ФРАЗ
-ua_neutral = [
+# 🎯 тип повідомлення
+def analyze(text):
+    t = text.lower()
+
+    if "прив" in t or "hello" in t:
+        return "greet"
+
+    if "як" in t or "how" in t:
+        return "how"
+
+    if "істор" in t or "story" in t or "расскаж" in t:
+        return "story"
+
+    if "шо" in t or "what" in t:
+        return "question"
+
+    return "normal"
+
+
+# 🎭 ФРАЗИ
+
+ua = [
     "ну ти даєш 😄",
     "є щось в цьому 😏",
     "звучить цікаво 😉",
     "ага, вже краще 😎",
 ]
 
-ua_fun = [
-    "давай качнемо атмосферу 💃🔥",
-    "музика вже проситься голосніше 🎧",
-    "я б зараз такий трек поставила… 😏",
+ru = [
+    "ну ты даешь 😄",
+    "есть в этом что-то 😏",
+    "звучит интересно 😉",
 ]
 
-ua_flirt = [
-    "ти сьогодні прям заряджаєш 😏",
-    "мені подобається як ти думаєш 😉",
-    "обережно… я можу втягнути тебе в ніч 💋",
-]
-
-ua_greet = [
-    "Привіт 🙂 рада тебе бачити",
-    "Йо 😎 ти якраз в тему",
-    "О, з’явився 😏",
-]
-
-ua_question = [
-    "а ти як думаєш? 😉",
-    "ну і що будемо робити далі? 😏",
-    "розкажеш більше? 🙂",
-]
-
-memory = [
-    "я тебе пам’ятаю 😉",
-    "ти тут не вперше 😏",
+en = [
+    "hmm interesting 😏",
+    "sounds good 😉",
+    "you got my attention 😎",
 ]
 
 
-# 🔥 АНАЛІЗ ПОВІДОМЛЕННЯ
-def analyze(message):
-    msg = message.lower()
+ua_story = [
+    "пам’ятаю вчора в клубі один тип так розкачав зал, що навіть бармен почав танцювати 😄",
+    "було якось — світло вирубилось, а народ не зупинився… співали і танцювали в темряві 🔥",
+]
 
-    if "привіт" in msg:
-        return "greet"
+ru_story = [
+    "вчера в клубе один чувак так зажёг, что даже охрана начала качать 😄",
+]
 
-    if "як справи" in msg or "як ти" in msg:
-        return "how"
+en_story = [
+    "yesterday one guy turned the whole dancefloor crazy… even the DJ lost control 😄",
+]
 
-    if "шо" in msg or "що" in msg:
-        return "question"
 
-    if "давай" in msg:
-        return "action"
+ua_greet = ["Привіт 🙂", "Йо 😎", "О, ти з’явився 😏"]
+ru_greet = ["Привет 🙂", "Йо 😎"]
+en_greet = ["Hey 🙂", "Yo 😎"]
 
-    if "ти тут" in msg:
-        return "presence"
 
-    return "normal"
+def pick(arr):
+    return random.choice(arr)
 
 
 def get_fallback_response(user, message):
     data = get_user(user)
 
-    if time.time() - data["last_reply"] < 3:
+    if time.time() - data["last_reply"] < 2:
         return None
 
     data["last_reply"] = time.time()
 
-    update_user(user, message)
-
     name = user.split(" ")[0]
+
+    lang = detect_lang(message)
     intent = analyze(message)
 
-    # 🔥 ЛОГІКА
-    if intent == "greet":
-        base = random.choice(ua_greet)
+    # 🔥 логіка по мові
+    if lang == "ua":
+        base_pool = ua
+        greet_pool = ua_greet
+        story_pool = ua_story
 
-    elif intent == "how":
-        base = random.choice([
-            "та нормально, ловлю вайб 😏",
-            "живу, кайфую 😉",
-            "все ок, музика рятує 🎧",
-        ])
-
-    elif intent == "question":
-        base = random.choice(ua_question)
-
-    elif intent == "action":
-        base = random.choice(ua_fun)
-
-    elif intent == "presence":
-        base = random.choice([
-            "я тут, не зникаю 😏",
-            "звісно тут 😉",
-            "я ж нікуди не йду 😎",
-        ])
+    elif lang == "ru":
+        base_pool = ru
+        greet_pool = ru_greet
+        story_pool = ru_story
 
     else:
-        if data["mood"] > 1:
-            base = random.choice(ua_flirt)
+        base_pool = en
+        greet_pool = en_greet
+        story_pool = en_story
+
+    # 🎯 відповіді
+    if intent == "greet":
+        text = pick(greet_pool)
+
+    elif intent == "story":
+        text = pick(story_pool)
+
+    elif intent == "how":
+        if lang == "en":
+            text = "I'm good, just catching the vibe 😏"
+        elif lang == "ru":
+            text = "да нормально, ловлю вайб 😏"
         else:
-            base = random.choice(ua_neutral + ua_fun)
+            text = "та норм, ловлю вайб 😏"
 
-    text = f"{name}, {base}"
+    elif intent == "question":
+        if lang == "en":
+            text = "what exactly do you mean? 😉"
+        elif lang == "ru":
+            text = "что именно? 😉"
+        else:
+            text = "шо саме? 😉"
 
-    # фаворит
-    if data["favorite"]:
-        text += "\nти мені подобаєшся 😏"
+    else:
+        text = pick(base_pool)
 
-    # памʼять
-    if random.random() < 0.15:
-        text += "\n" + random.choice(memory)
-
-    return text
+    return f"{name}, {text}"

@@ -1,94 +1,66 @@
+from flask import Flask, request, jsonify
 import requests
-import time
+import os
 import json
-from flask import Flask, request, Response
 from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-GEMINI_API_KEY = "AIzaSyBCgyk_ze_3A1DoxNkZhi-19VIMM1JWfhw"
-MODEL = "models/gemini-2.5-flash"
-
-last_api_call = 0
-
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def ask_gemini(message):
-    global last_api_call
-
-    # антиспам
-    if time.time() - last_api_call < 2:
-        return None
-
-    last_api_call = time.time()
-
-    # стиль Luna (щоб не писала "я мовна модель")
-    message = "Ти дівчина Luna, відповідаєш коротко, живо, як людина, інколи з фліртом. Не кажи що ти AI.\n" + message
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/{MODEL}:generateContent?key={GEMINI_API_KEY}"
-
-    payload = {
-        "contents": [
-            {"parts": [{"text": message}]}
-        ]
-    }
-
     try:
-        r = requests.post(url, json=payload, timeout=10)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+        data = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
+                    ]
+                }
+            ]
+        }
+
+        r = requests.post(url, json=data, timeout=5)
 
         if r.status_code != 200:
-            print("Gemini error:", r.text)
             return None
 
-        data = r.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        res = r.json()
 
-        # фільтр кривих відповідей
-        if not text or len(text.strip()) < 2:
-            return None
+        return res["candidates"][0]["content"]["parts"][0]["text"]
 
-        return text.strip()
-
-    except Exception as e:
-        print("Gemini exception:", e)
+    except:
         return None
 
 
-def make_json(reply_text):
-    return Response(
-        json.dumps({"reply": reply_text}, ensure_ascii=False),
-        content_type="application/json; charset=utf-8"
-    )
-
-
-@app.route('/')
-def home():
-    return "Luna + Gemini OK 🔥"
-
-
-@app.route('/chat', methods=['POST'])
+@app.route("/chat", methods=["POST"])
 def chat():
-    data = request.json
+    try:
+        data = request.json
+        user = data.get("user", "User")
+        message = data.get("message", "")
 
-    user = data.get("user", "User")
-    message = data.get("message", "")
+        # 🔥 пробуємо Gemini
+        reply = ask_gemini(message)
 
-    # ігнор мусорних символів
-    if not any(c.isalnum() for c in message):
-        return make_json("")
+        # 🔥 fallback якщо Gemini впав
+        if not reply:
+            reply = get_fallback_response(user, message)
 
-    # ===== GEMINI =====
-    ai_reply = ask_gemini(message)
+        if not reply:
+            reply = "..."
 
-    if ai_reply:
-        return make_json(ai_reply)
+        return jsonify({"reply": reply})
 
-    # ===== FALLBACK =====
-    fallback = get_fallback_response(user, message)
+    except Exception as e:
+        return jsonify({"reply": "error"})
 
-    if fallback:
-        return make_json(fallback)
 
-    return make_json("")
+@app.route("/")
+def home():
+    return "Luna AI is running 🔥"
 
 
 if __name__ == "__main__":

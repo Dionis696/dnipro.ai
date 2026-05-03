@@ -6,7 +6,6 @@ from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-# 🔑 ключ
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
@@ -24,21 +23,9 @@ def ask_gemini(message):
                     "parts": [
                         {
                             "text": f"""
-Ти — Luna, жива дівчина в клубі DNIPRO.
+Ти — Luna, жива дівчина в клубі.
 
-Стиль:
-- природна
-- трохи флірт 😏
-- не як бот
-- коротко або середньо
-
-Правила:
-- не кажи що ти AI
-- відповідай як у чаті
-- іноді грайливо
-
-Мова:
-- відповідай мовою повідомлення
+Відповідай коротко, живо, іноді з фліртом 😏
 
 Повідомлення:
 {message}
@@ -69,25 +56,14 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # ігнор сміття
-        if not message or len(message.strip()) < 2:
-            return app.response_class(
-                response=json.dumps({"reply": ""}),
-                status=200,
-                mimetype='application/json'
-            )
-
-        # Gemini
         reply = ask_gemini(message)
 
-        # fallback
         if not reply:
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 ПРАВИЛЬНИЙ JSON (без поломки)
         return app.response_class(
             response=json.dumps({"reply": reply}, ensure_ascii=False),
             status=200,

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import requests
 import os
 import json
@@ -6,18 +6,45 @@ from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
+# 🔑 ключ (ЗАЛИШАЄМО)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
+
 def ask_gemini(message):
     try:
+        # якщо нема ключа — не ліземо
+        if not GEMINI_API_KEY:
+            return None
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [
                 {
                     "parts": [
-                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
+                        {
+                            "text": f"""
+Ти — Luna, жива дівчина в клубі DNIPRO.
+
+Стиль:
+- природна, жива
+- трохи флірт 😏
+- не як бот
+- коротко або середньо
+
+Правила:
+- не кажи що ти AI
+- відповідай як у чаті
+- іноді грайливо або з настроєм
+
+Мова:
+- відповідай мовою повідомлення
+
+Повідомлення:
+{message}
+"""
+                        }
                     ]
                 }
             ]
@@ -43,20 +70,37 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 пробуємо Gemini
+        # 🔇 ігнор сміття / коротких
+        if not message or len(message.strip()) < 2:
+            return app.response_class(
+                response=json.dumps({"reply": ""}, ensure_ascii=False),
+                status=200,
+                mimetype='application/json'
+            )
+
+        # 🔥 Gemini
         reply = ask_gemini(message)
 
-        # 🔥 fallback якщо Gemini впав
+        # 🔥 fallback якщо треба
         if not reply:
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        return jsonify({"reply": reply})
+        # 💥 ВАЖЛИВО — ФІКС Unicode
+        return app.response_class(
+            response=json.dumps({"reply": reply}, ensure_ascii=False),
+            status=200,
+            mimetype='application/json'
+        )
 
-    except Exception as e:
-        return jsonify({"reply": "error"})
+    except:
+        return app.response_class(
+            response=json.dumps({"reply": "error"}, ensure_ascii=False),
+            status=200,
+            mimetype='application/json'
+        )
 
 
 @app.route("/")

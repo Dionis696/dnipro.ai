@@ -7,7 +7,7 @@ from luna_brain import get_fallback_response
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-print("KEY:", GEMINI_API_KEY)
+print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 def ask_gemini(message):
     try:

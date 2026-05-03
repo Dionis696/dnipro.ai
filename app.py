@@ -6,14 +6,13 @@ from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-# 🔑 ключ (ЗАЛИШАЄМО)
+# 🔑 ключ (НЕ ЧІПАЄМО)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
 def ask_gemini(message):
     try:
-        # якщо нема ключа — не ліземо
         if not GEMINI_API_KEY:
             return None
 
@@ -36,7 +35,7 @@ def ask_gemini(message):
 Правила:
 - не кажи що ти AI
 - відповідай як у чаті
-- іноді грайливо або з настроєм
+- іноді грайливо
 
 Мова:
 - відповідай мовою повідомлення
@@ -70,10 +69,10 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔇 ігнор сміття / коротких
+        # 🔇 ігнор сміття
         if not message or len(message.strip()) < 2:
             return app.response_class(
-                response=json.dumps({"reply": ""}, ensure_ascii=False),
+                response=json.dumps({"reply": ""}),
                 status=200,
                 mimetype='application/json'
             )
@@ -81,23 +80,28 @@ def chat():
         # 🔥 Gemini
         reply = ask_gemini(message)
 
-        # 🔥 fallback якщо треба
+        # 🔥 fallback якщо нема відповіді
         if not reply:
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 ВАЖЛИВО — ФІКС Unicode
+        # 💥 ФІКС КОДУВАННЯ (ГОЛОВНЕ)
+        try:
+            fixed_reply = reply.encode("utf-8").decode("latin-1")
+        except:
+            fixed_reply = reply
+
         return app.response_class(
-            response=json.dumps({"reply": reply}, ensure_ascii=False),
+            response=json.dumps({"reply": fixed_reply}),
             status=200,
             mimetype='application/json'
         )
 
     except:
         return app.response_class(
-            response=json.dumps({"reply": "error"}, ensure_ascii=False),
+            response=json.dumps({"reply": "error"}),
             status=200,
             mimetype='application/json'
         )

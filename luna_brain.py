@@ -3,15 +3,29 @@ import time
 
 users = {}
 
+# 📚 книга
+book_lines = []
+
+try:
+    with open("luna_book.txt", "r", encoding="utf-8") as f:
+        book_lines = [line.strip() for line in f if line.strip()]
+except:
+    book_lines = []
+
+
+def get_book_line():
+    if not book_lines:
+        return None
+    return random.choice(book_lines)
+
+
 def get_user(user):
     if user not in users:
-        users[user] = {
-            "last_reply": 0
-        }
+        users[user] = {"last_reply": 0}
     return users[user]
 
 
-# 🌍 визначення мови
+# 🌍 мова
 def detect_lang(text):
     t = text.lower()
 
@@ -22,7 +36,7 @@ def detect_lang(text):
     return "ua"
 
 
-# 🎯 тип повідомлення
+# 🎯 тип
 def analyze(text):
     t = text.lower()
 
@@ -41,13 +55,13 @@ def analyze(text):
     return "normal"
 
 
-# 🎭 ФРАЗИ
-
+# 🎭 фрази
 ua = [
     "ну ти даєш 😄",
     "є щось в цьому 😏",
     "звучить цікаво 😉",
     "ага, вже краще 😎",
+    "давай трохи драйву 💃",
 ]
 
 ru = [
@@ -64,16 +78,16 @@ en = [
 
 
 ua_story = [
-    "пам’ятаю вчора в клубі один тип так розкачав зал, що навіть бармен почав танцювати 😄",
-    "було якось — світло вирубилось, а народ не зупинився… співали і танцювали в темряві 🔥",
+    "було якось — світло вирубилось, а всі танцювали далі 🔥",
+    "один раз в клубі бармен почав танцювати швидше за гостей 😄",
 ]
 
 ru_story = [
-    "вчера в клубе один чувак так зажёг, что даже охрана начала качать 😄",
+    "вчера один тип раскачал зал так, что даже охрана улыбалась 😄",
 ]
 
 en_story = [
-    "yesterday one guy turned the whole dancefloor crazy… even the DJ lost control 😄",
+    "yesterday one guy turned the whole dancefloor crazy 😄",
 ]
 
 
@@ -89,6 +103,7 @@ def pick(arr):
 def get_fallback_response(user, message):
     data = get_user(user)
 
+    # анти-спам
     if time.time() - data["last_reply"] < 2:
         return None
 
@@ -99,23 +114,19 @@ def get_fallback_response(user, message):
     lang = detect_lang(message)
     intent = analyze(message)
 
-    # 🔥 логіка по мові
     if lang == "ua":
         base_pool = ua
         greet_pool = ua_greet
         story_pool = ua_story
-
     elif lang == "ru":
         base_pool = ru
         greet_pool = ru_greet
         story_pool = ru_story
-
     else:
         base_pool = en
         greet_pool = en_greet
         story_pool = en_story
 
-    # 🎯 відповіді
     if intent == "greet":
         text = pick(greet_pool)
 
@@ -123,22 +134,26 @@ def get_fallback_response(user, message):
         text = pick(story_pool)
 
     elif intent == "how":
-        if lang == "en":
-            text = "I'm good, just catching the vibe 😏"
-        elif lang == "ru":
-            text = "да нормально, ловлю вайб 😏"
-        else:
-            text = "та норм, ловлю вайб 😏"
+        text = {
+            "ua": "та норм, ловлю вайб 😏",
+            "ru": "да нормально, ловлю вайб 😏",
+            "en": "I'm good, just vibing 😏"
+        }[lang]
 
     elif intent == "question":
-        if lang == "en":
-            text = "what exactly do you mean? 😉"
-        elif lang == "ru":
-            text = "что именно? 😉"
-        else:
-            text = "шо саме? 😉"
+        text = {
+            "ua": "шо саме? 😉",
+            "ru": "что именно? 😉",
+            "en": "what exactly? 😉"
+        }[lang]
 
     else:
         text = pick(base_pool)
+
+    # 📚 додаємо книгу інколи
+    if random.random() < 0.25:
+        book = get_book_line()
+        if book:
+            text += "\n" + book
 
     return f"{name}, {text}"

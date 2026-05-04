@@ -56,7 +56,7 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        reply = ask_gemini(message)
+        reply = None
 
         if not reply:
             reply = get_fallback_response(user, message)

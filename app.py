@@ -21,7 +21,7 @@ def ask_gemini(message):
             "contents": [
                 {
                     "parts": [
-                        {"text": f"Відповідай як жива дівчина, коротко:\n{message}"}
+                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
                     ]
                 }
             ]
@@ -46,24 +46,27 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 зараз працюємо тільки fallback (як ти хотів)
+        # 🔥 зараз fallback (стабільно)
         reply = get_fallback_response(user, message)
+
+        # (пізніше можна включити Gemini)
+        # gem = ask_gemini(message)
+        # if gem:
+        #     reply = gem
 
         if not reply:
             reply = "..."
 
-        # 💥 ГОЛОВНИЙ ФІКС КОДУВАННЯ
-        safe_reply = reply.encode("utf-8").decode("latin1")
-
         return app.response_class(
-            response=json.dumps({"reply": safe_reply}),
+            response=json.dumps({"reply": reply}, ensure_ascii=False),
             status=200,
             mimetype='application/json'
         )
 
-    except:
+    except Exception as e:
+        print("ERROR:", e)
         return app.response_class(
-            response=json.dumps({"reply": "error"}),
+            response=json.dumps({"reply": "error"}, ensure_ascii=False),
             status=200,
             mimetype='application/json'
         )

@@ -12,10 +12,8 @@ print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
 def ask_gemini(message):
-    print("GEMINI FUNCTION CALLED")
     try:
         if not GEMINI_API_KEY:
-            print("NO KEY")
             return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -24,44 +22,21 @@ def ask_gemini(message):
             "contents": [
                 {
                     "parts": [
-                        {
-                            "text": f"""
-Ти — дівчина Luna в клубі DNIPRO 😏
-Стиль: жива, коротко, флірт, без тупих повторів.
-
-Правила:
-- відповідай по змісту
-- не пиши "шо саме?" постійно
-- додавай емоцію
-- іноді мікс мов
-
-Повідомлення:
-{message}
-"""
-                        }
+                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
                     ]
                 }
             ]
         }
 
-        r = requests.post(url, json=data, timeout=10)
-
-        print("STATUS:", r.status_code)
-        print("RAW:", r.text)
+        r = requests.post(url, json=data, timeout=5)
 
         if r.status_code != 200:
             return None
 
         res = r.json()
+        return res["candidates"][0]["content"]["parts"][0]["text"]
 
-        text = res["candidates"][0]["content"]["parts"][0]["text"]
-
-        print("GEMINI:", text)
-
-        return text
-
-    except Exception as e:
-        print("ERROR GEMINI:", e)
+    except:
         return None
 
 
@@ -72,18 +47,13 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 1. пробуємо Gemini
-        reply = ask_gemini(message)
-
-        # 🔁 2. fallback якщо нема відповіді
-        if not reply:
-            print("FALLBACK USED")
-            reply = get_fallback_response(user, message)
+        # 🔥 поки fallback (стабільно)
+        reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 стабільне кодування для Second Life
+        # 💥 ГОЛОВНИЙ ФІКС — URL ENCODE
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(

@@ -21,16 +21,7 @@ def ask_gemini(message):
             "contents": [
                 {
                     "parts": [
-                        {
-                            "text": f"""
-Ти — Luna, жива дівчина в клубі.
-
-Відповідай коротко, живо, іноді з фліртом 😏
-
-Повідомлення:
-{message}
-"""
-                        }
+                        {"text": f"Відповідай як жива дівчина, коротко:\n{message}"}
                     ]
                 }
             ]
@@ -42,7 +33,6 @@ def ask_gemini(message):
             return None
 
         res = r.json()
-
         return res["candidates"][0]["content"]["parts"][0]["text"]
 
     except:
@@ -56,16 +46,17 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        reply = None
-
-        if not reply:
-            reply = get_fallback_response(user, message)
+        # 🔥 зараз працюємо тільки fallback (як ти хотів)
+        reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
+        # 💥 ГОЛОВНИЙ ФІКС КОДУВАННЯ
+        safe_reply = reply.encode("utf-8").decode("latin1")
+
         return app.response_class(
-            response=json.dumps({"reply": reply}, ensure_ascii=False),
+            response=json.dumps({"reply": safe_reply}),
             status=200,
             mimetype='application/json'
         )

@@ -22,7 +22,22 @@ def ask_gemini(message):
             "contents": [
                 {
                     "parts": [
-                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
+                        {
+                            "text": f"""
+Ти — дівчина Luna в клубі DNIPRO 😏
+Стиль: жива, трохи флірт, короткі відповіді, без занудства
+
+Правила:
+- не пиши довго
+- не повторюйся
+- відповідай по змісту
+- можна мікс мов (ua/ru/en)
+- іноді додавай вайб клубу
+
+Повідомлення:
+{message}
+"""
+                        }
                     ]
                 }
             ]
@@ -47,13 +62,17 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 поки fallback (стабільно)
-        reply = get_fallback_response(user, message)
+        # 🔥 1. пробуємо Gemini
+        reply = ask_gemini(message)
+
+        # 🔁 2. fallback якщо нема відповіді
+        if not reply:
+            reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 ГОЛОВНИЙ ФІКС — URL ENCODE
+        # 💥 стабільне кодування
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(

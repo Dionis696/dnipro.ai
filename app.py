@@ -14,6 +14,7 @@ print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 def ask_gemini(message):
     try:
         if not GEMINI_API_KEY:
+            print("NO KEY")
             return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -25,14 +26,13 @@ def ask_gemini(message):
                         {
                             "text": f"""
 Ти — дівчина Luna в клубі DNIPRO 😏
-Стиль: жива, трохи флірт, короткі відповіді, без занудства
+Стиль: жива, коротко, флірт, без тупих повторів.
 
 Правила:
-- не пиши довго
-- не повторюйся
 - відповідай по змісту
-- можна мікс мов (ua/ru/en)
-- іноді додавай вайб клубу
+- не пиши "шо саме?" постійно
+- додавай емоцію
+- іноді мікс мов
 
 Повідомлення:
 {message}
@@ -43,15 +43,24 @@ def ask_gemini(message):
             ]
         }
 
-        r = requests.post(url, json=data, timeout=5)
+        r = requests.post(url, json=data, timeout=10)
+
+        print("STATUS:", r.status_code)
+        print("RAW:", r.text)
 
         if r.status_code != 200:
             return None
 
         res = r.json()
-        return res["candidates"][0]["content"]["parts"][0]["text"]
 
-    except:
+        text = res["candidates"][0]["content"]["parts"][0]["text"]
+
+        print("GEMINI:", text)
+
+        return text
+
+    except Exception as e:
+        print("ERROR GEMINI:", e)
         return None
 
 
@@ -67,12 +76,13 @@ def chat():
 
         # 🔁 2. fallback якщо нема відповіді
         if not reply:
+            print("FALLBACK USED")
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 стабільне кодування
+        # 💥 стабільне кодування для Second Life
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(

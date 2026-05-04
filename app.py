@@ -2,6 +2,7 @@ from flask import Flask, request
 import requests
 import os
 import json
+import urllib.parse
 from luna_brain import get_fallback_response
 
 app = Flask(__name__)
@@ -46,19 +47,17 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 зараз fallback (стабільно)
+        # 🔥 поки fallback (стабільно)
         reply = get_fallback_response(user, message)
-
-        # (пізніше можна включити Gemini)
-        # gem = ask_gemini(message)
-        # if gem:
-        #     reply = gem
 
         if not reply:
             reply = "..."
 
+        # 💥 ГОЛОВНИЙ ФІКС — URL ENCODE
+        safe_reply = urllib.parse.quote(reply)
+
         return app.response_class(
-            response=json.dumps({"reply": reply}, ensure_ascii=False),
+            response=json.dumps({"reply": safe_reply}),
             status=200,
             mimetype='application/json'
         )
@@ -66,7 +65,7 @@ def chat():
     except Exception as e:
         print("ERROR:", e)
         return app.response_class(
-            response=json.dumps({"reply": "error"}, ensure_ascii=False),
+            response=json.dumps({"reply": "error"}),
             status=200,
             mimetype='application/json'
         )

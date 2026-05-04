@@ -12,6 +12,7 @@ print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
 def ask_gemini(message):
+    print("GEMINI FUNCTION CALLED")
     try:
         if not GEMINI_API_KEY:
             print("NO KEY")

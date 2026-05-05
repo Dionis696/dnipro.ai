@@ -4,6 +4,7 @@ import os
 import json
 import urllib.parse
 from luna_brain import get_fallback_response
+print("🔥 THIS IS NEW VERSION 🔥")
 
 app = Flask(__name__)
 

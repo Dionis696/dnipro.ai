@@ -22,21 +22,26 @@ def ask_gemini(message):
             "contents": [
                 {
                     "parts": [
-                        {"text": f"Відповідай як жива дівчина Luna, коротко, природно:\n{message}"}
+                        {
+                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, по темі, без повторів:\n{message}"
+                        }
                     ]
                 }
             ]
         }
 
-        r = requests.post(url, json=data, timeout=5)
+        r = requests.post(url, json=data, timeout=7)
 
         if r.status_code != 200:
+            print("GEMINI ERROR:", r.text)
             return None
 
         res = r.json()
+
         return res["candidates"][0]["content"]["parts"][0]["text"]
 
-    except:
+    except Exception as e:
+        print("GEMINI EXCEPTION:", e)
         return None
 
 
@@ -47,13 +52,16 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 поки fallback (стабільно)
-        reply = get_fallback_response(user, message)
+        # 🔥 ГІБРИД (це головне)
+        reply = ask_gemini(message)
+
+        if not reply:
+            reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 ГОЛОВНИЙ ФІКС — URL ENCODE
+        # 💥 КОДУВАННЯ (НЕ ЧІПАТИ)
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(

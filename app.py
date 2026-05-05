@@ -13,7 +13,10 @@ print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 def ask_gemini(message):
     try:
+        print("GEMINI FUNCTION CALLED")
+
         if not GEMINI_API_KEY:
+            print("NO GEMINI KEY")
             return None
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -23,7 +26,7 @@ def ask_gemini(message):
                 {
                     "parts": [
                         {
-                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, по темі, без повторів:\n{message}"
+                            "text": f"Luna style, short, natural, no repeats:\n{message}"
                         }
                     ]
                 }
@@ -32,8 +35,10 @@ def ask_gemini(message):
 
         r = requests.post(url, json=data, timeout=7)
 
+        print("STATUS:", r.status_code)
+        print("RAW:", r.text)
+
         if r.status_code != 200:
-            print("GEMINI ERROR:", r.text)
             return None
 
         res = r.json()
@@ -52,16 +57,17 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 ГІБРИД (це головне)
+        # 🔥 ГІБРИД: Gemini → fallback
         reply = ask_gemini(message)
 
         if not reply:
+            print("USING FALLBACK")
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 КОДУВАННЯ (НЕ ЧІПАТИ)
+        # 💥 ЄДИНЕ місце кодування (важливо)
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(

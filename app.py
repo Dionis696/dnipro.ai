@@ -12,21 +12,21 @@ print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
 def ask_gemini(message):
-    try:
-        print("GEMINI FUNCTION CALLED")
+    print("=== GEMINI START ===")
 
+    try:
         if not GEMINI_API_KEY:
             print("NO GEMINI KEY")
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [
                 {
                     "parts": [
                         {
-                            "text": f"Luna style, short, natural, no repeats:\n{message}"
+                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, без повторів:\n{message}"
                         }
                     ]
                 }
@@ -53,11 +53,13 @@ def ask_gemini(message):
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        print("CHAT FUNCTION WORKING")
+
         data = request.json
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🔥 ГІБРИД: Gemini → fallback
+        print("CALLING GEMINI...")
         reply = ask_gemini(message)
 
         if not reply:
@@ -67,7 +69,7 @@ def chat():
         if not reply:
             reply = "..."
 
-        # 💥 ЄДИНЕ місце кодування (важливо)
+        # 🔥 ЄДИНЕ правильне кодування (залишити так)
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(
@@ -91,4 +93,4 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0", port=10000) 

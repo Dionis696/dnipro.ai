@@ -4,6 +4,7 @@ import os
 import json
 import urllib.parse
 from luna_brain import get_fallback_response
+
 print("🔥 THIS IS NEW VERSION 🔥")
 
 app = Flask(__name__)
@@ -12,45 +13,48 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
+# 🔥 GEMINI
 def ask_gemini(message):
     print("=== GEMINI START ===")
-
     try:
         if not GEMINI_API_KEY:
             print("NO GEMINI KEY")
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [
                 {
                     "parts": [
                         {
-                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, без повторів:\n{message}"
+                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, природно, без повторів:\n{message}"
                         }
                     ]
                 }
             ]
         }
 
-        r = requests.post(url, json=data, timeout=7)
+        r = requests.post(url, json=data, timeout=5)
 
         print("STATUS:", r.status_code)
-        print("RAW:", r.text)
 
         if r.status_code != 200:
+            print("GEMINI ERROR:", r.text)
             return None
 
         res = r.json()
+        text = res["candidates"][0]["content"]["parts"][0]["text"]
 
-        return res["candidates"][0]["content"]["parts"][0]["text"]
+        print("GEMINI OK")
+        return text
 
     except Exception as e:
         print("GEMINI EXCEPTION:", e)
         return None
 
 
+# 🔥 CHAT
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -60,17 +64,20 @@ def chat():
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        print("CALLING GEMINI...")
+        # 👉 СПОЧАТКУ GEMINI
         reply = ask_gemini(message)
 
-        if not reply:
-            print("USING FALLBACK")
+        # 👉 ЯКЩО НЕ ВІДПОВІВ — FALLBACK
+        if reply:
+            print("USING GEMINI")
+        else:
+            print("FALLBACK MODE")
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 🔥 ЄДИНЕ правильне кодування (залишити так)
+        # 💥 СТАБІЛЬНИЙ ФІКС КОДУВАННЯ (твій варіант)
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(
@@ -94,4 +101,4 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000) 
+    app.run(host="0.0.0.0", port=10000)

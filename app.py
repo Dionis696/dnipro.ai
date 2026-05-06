@@ -13,6 +13,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
+# 🔥 GEMINI
 def ask_gemini(message):
     print("=== GEMINI START ===")
 
@@ -21,63 +22,85 @@ def ask_gemini(message):
             print("NO KEY")
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [
                 {
                     "parts": [
                         {
-                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко і без повторів:\n{message}"
+                            "text": f"Відповідай як жива дівчина Luna в клубі, коротко, природно, без повторів:\n{message}"
                         }
                     ]
                 }
             ]
         }
 
-        r = requests.post(url, json=data, timeout=6)
+        r = requests.post(url, json=data, timeout=10)
 
         print("STATUS:", r.status_code)
+        print("RAW:", r.text)
 
         if r.status_code != 200:
-            print("ERROR:", r.text)
             return None
 
         res = r.json()
-        return res["candidates"][0]["content"]["parts"][0]["text"]
+
+        if "candidates" not in res:
+            print("NO CANDIDATES")
+            return None
+
+        text = res["candidates"][0]["content"]["parts"][0]["text"]
+
+        print("GEMINI OK")
+        return text
 
     except Exception as e:
         print("EXCEPTION:", e)
         return None
 
 
+# 🔥 CHAT
 @app.route("/chat", methods=["POST"])
 def chat():
     print("CHAT HIT")
 
-    data = request.json
-    user = data.get("user", "User")
-    message = data.get("message", "")
+    try:
+        data = request.json
+        print("DATA:", data)
 
-    # 👉 пробуємо Gemini
-    reply = ask_gemini(message)
+        user = data.get("user", "User")
+        message = data.get("message", "")
 
-    # 👉 якщо не вийшло — fallback
-    if not reply:
-        print("FALLBACK")
-        reply = get_fallback_response(user, message)
+        # 👉 пробуємо Gemini
+        reply = ask_gemini(message)
 
-    if not reply:
-        reply = "..."
+        # 👉 fallback якщо нема відповіді
+        if not reply:
+            print("FALLBACK MODE")
+            reply = get_fallback_response(user, message)
+        else:
+            print("USING GEMINI")
 
-    # 💥 правильне кодування (як у тебе стабільно)
-    safe_reply = urllib.parse.quote(reply)
+        if not reply:
+            reply = "..."
 
-    return app.response_class(
-        response=json.dumps({"reply": safe_reply}),
-        status=200,
-        mimetype='application/json'
-    )
+        # 💥 правильне кодування
+        safe_reply = urllib.parse.quote(reply)
+
+        return app.response_class(
+            response=json.dumps({"reply": safe_reply}),
+            status=200,
+            mimetype='application/json'
+        )
+
+    except Exception as e:
+        print("ERROR:", e)
+        return app.response_class(
+            response=json.dumps({"reply": "error"}),
+            status=200,
+            mimetype='application/json'
+        )
 
 
 @app.route("/")

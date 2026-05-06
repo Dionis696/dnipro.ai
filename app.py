@@ -67,34 +67,32 @@ def chat():
 
     try:
         data = request.json
-        print("DATA:", data)
-
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 👉 пробуємо Gemini
+        # 🔥 тест Gemini vs fallback
         gemini_reply = ask_gemini(message)
 
-if gemini_reply:
-    reply = "💡GEMINI: " + gemini_reply
-else:
-    reply = "⚠️FALLBACK: " + str(get_fallback_response(user, message))
-
-        # 👉 fallback якщо не відповів
-        if not reply:
-            print("FALLBACK MODE")
-            reply = get_fallback_response(user, message)
-        else:
+        if gemini_reply:
             print("USING GEMINI")
+            reply = "💡GEMINI: " + gemini_reply
+        else:
+            print("FALLBACK MODE")
+            fb = get_fallback_response(user, message)
+            reply = "⚠️FALLBACK: " + (fb if fb else "...")
 
-        if not reply:
-            reply = "..."
-
-        # 💥 ВАЖЛИВО — тільки URL encode (як у тебе стабільно)
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(
             response=json.dumps({"reply": safe_reply}),
+            status=200,
+            mimetype='application/json'
+        )
+
+    except Exception as e:
+        print("ERROR:", e)
+        return app.response_class(
+            response=json.dumps({"reply": "error"}),
             status=200,
             mimetype='application/json'
         )

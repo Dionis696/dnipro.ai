@@ -73,7 +73,12 @@ def chat():
         message = data.get("message", "")
 
         # 👉 пробуємо Gemini
-        reply = ask_gemini(message)
+        gemini_reply = ask_gemini(message)
+
+if gemini_reply:
+    reply = "💡GEMINI: " + gemini_reply
+else:
+    reply = "⚠️FALLBACK: " + str(get_fallback_response(user, message))
 
         # 👉 fallback якщо не відповів
         if not reply:

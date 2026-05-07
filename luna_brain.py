@@ -1,103 +1,119 @@
 import random
 import re
 
-# =========================
-# 🧠 MEMORY
-# =========================
-memory = {}
+# =====================
+# ПАМ'ЯТЬ
+# =====================
+users = {}
 
-def remember(user, msg):
-    if user not in memory:
-        memory[user] = []
-    memory[user].append(msg)
-    memory[user] = memory[user][-10:]
+def update_user_memory(user, message):
+    if user not in users:
+        users[user] = {"count": 0}
+    users[user]["count"] += 1
 
 
-# =========================
-# 🌍 LANGUAGE DETECTION
-# =========================
-def detect_lang(text):
-    text = text.lower()
-
-    ua = len(re.findall(r"[а-щьюяєіїґ]", text))
-    ru = len(re.findall(r"[а-яё]", text))
-    en = len(re.findall(r"[a-z]", text))
-
-    if en > ua and en > ru:
+# =====================
+# МОВА
+# =====================
+def detect_language(text):
+    if re.search(r"[a-zA-Z]", text):
         return "EN"
-    if ru > ua and ru > en:
-        return "RU"
+    if re.search(r"[а-яА-ЯёЁ]", text):
+        return "UA"
     return "UA"
 
 
-# =========================
-# 🎭 RESPONSES
-# =========================
-
-UA = [
-    "я тут 😌",
-    "ловлю вайб 💃",
-    "цікаво 👀",
-    "продовжуй 😏",
-    "я тебе чую 🎧",
-]
-
-EN = [
-    "I'm here 😌",
-    "vibing 💃",
-    "interesting 👀",
-    "go on 😏",
-    "I hear you 🎧",
-]
-
-RU = [
-    "я тут 😌",
-    "ловлю вайб 💃",
-    "интересно 👀",
-    "продолжай 😏",
-    "слышу тебя 🎧",
-]
+# =====================
+# ІГНОР
+# =====================
+def should_ignore(text):
+    if len(text) > 150:
+        return True
+    return False
 
 
-# =========================
-# 🧠 CORE FUNCTION
-# =========================
+# =====================
+# ЗАГРУЗКА КНИГИ
+# =====================
+book_lines = []
+
+def load_book():
+    global book_lines
+    try:
+        with open("luna_book.txt", "r", encoding="utf-8") as f:
+            book_lines = [l.strip() for l in f if l.strip()]
+    except:
+        book_lines = []
+
+load_book()
+
+
+# =====================
+# ЛОГІКА ВІДПОВІДІ
+# =====================
 def process_luna_message(user, message):
-    if not message:
-        return ""
-
-    remember(user, message)
-
     msg = message.lower()
-    lang = detect_lang(msg)
 
-    # 🔥 greetings
-    if any(x in msg for x in ["привіт", "hi", "hello", "привет"]):
-        return random.choice({
-            "UA": ["привіт 😏", "йо 💃", "хей 🔥"],
-            "EN": ["hey 😏", "yo 💃", "hi 🔥"],
-            "RU": ["привет 😏", "йо 💃", "хей 🔥"]
-        }[lang])
+    update_user_memory(user, message)
 
-    # 🎧 music
-    if any(x in msg for x in ["муз", "music", "dj", "track", "трек"]):
-        return random.choice({
-            "UA": ["бас вже відчувається 🔥", "давай кач 💃"],
-            "EN": ["we need bass 🔥", "let's vibe 💃"],
-            "RU": ["нужен бас 🔥", "давай кач 💃"]
-        }[lang])
+    if should_ignore(msg):
+        return "ти щось дуже довге написав 😌"
 
-    # ❓ question
+    # =====================
+    # 70% — BOOK SYSTEM
+    # =====================
+    if book_lines and random.random() < 0.7:
+        base = random.choice(book_lines)
+
+        # іноді додаємо “живу реакцію”
+        if random.random() < 0.3:
+            base += "\n" + random.choice([
+                "я тут 😌",
+                "ти сьогодні активний 😏",
+                "я це запам’ятаю 💃",
+                "не зупиняй вайб 🔥"
+            ])
+
+        return base
+
+    # =====================
+    # 20% — ЛОГІКА
+    # =====================
+    if "привіт" in msg:
+        return random.choice([
+            "привіт 😌 рада тебе бачити",
+            "йо 😏 ти як тут?",
+            "хей 💃 заходь в вайб"
+        ])
+
+    if "як" in msg:
+        return random.choice([
+            "нормально 😌 музика грає",
+            "ловлю вайб 💃",
+            "все ок, клуб живе 🔥"
+        ])
+
     if "?" in msg:
-        return random.choice({
-            "UA": ["мм цікаво 👀", "продовжуй 😏"],
-            "EN": ["interesting 👀", "go on 😏"],
-            "RU": ["интересно 👀", "продолжай 😏"]
-        }[lang])
+        return random.choice([
+            "цікаве питання 😏",
+            "ти сьогодні думаєш глибоко 👀",
+            "мм… я подумаю над цим"
+        ])
 
-    # 🔁 default
-    if lang == "EN":
-        return random.choice(EN)
-    if lang == "RU":
-        return random.choice(RU)
-    return random.choice(UA)
+    # =====================
+    # 10% — ГУМОР / ІСТОРІЇ
+    # =====================
+    if random.random() < 0.5:
+        return random.choice([
+            "я колись сказала DJ що трек не качає… мене вимкнули 😏",
+            "один танцпол так качався, що ми думали землетрус 💃🔥",
+            "тут навіть стіни танцюють 😌",
+            "я не пліткую… я просто знаю все 😏"
+        ])
+
+    # fallback
+    return random.choice([
+        "я тут 😌",
+        "ловлю вайб 💃",
+        "музика говорить замість мене 🎧"
+    ])

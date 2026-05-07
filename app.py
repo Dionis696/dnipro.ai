@@ -7,13 +7,15 @@ from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-print("🔥 LUNA WORKING VERSION 🔥")
+print("🔥 LUNA SECURE VERSION 🔥")
 
+# 🔒 ключ тільки з Render Environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
-# 🔥 GEMINI (СТАБІЛЬНА ВЕРСІЯ)
+# 🤖 Gemini
 def ask_gemini(message):
     try:
         if not GEMINI_API_KEY:
@@ -26,7 +28,16 @@ def ask_gemini(message):
                 {
                     "parts": [
                         {
-                            "text": f"Відповідай як жива дівчина в клубі, коротко і по темі:\n{message}"
+                            "text": f"""
+Ти Luna — жива дівчина в клубі Dnipro.
+Відповідай природно, коротко, емоційно.
+Не повторюй одні й ті самі фрази.
+Іноді фліртуй.
+Не будь як бот.
+
+Повідомлення:
+{message}
+"""
                         }
                     ]
                 }
@@ -36,61 +47,63 @@ def ask_gemini(message):
         r = requests.post(url, json=data, timeout=10)
 
         if r.status_code != 200:
-            print("GEMINI ERROR:", r.status_code, r.text)
+            print("GEMINI ERROR:", r.status_code)
             return None
 
         res = r.json()
 
         if "candidates" not in res:
-            print("NO CANDIDATES:", res)
+            print("BAD RESPONSE")
             return None
 
-        return res["candidates"][0]["content"]["parts"][0]["text"]
+        return res["candidates"][0]["content"]["parts"][0]["text"].strip()
 
     except Exception as e:
         print("EXCEPTION:", e)
         return None
 
 
-# 🔥 CHAT
+# 💬 Chat
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
         data = request.json
+
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 👉 Gemini
+        # 🤖 пробуємо Gemini
         reply = ask_gemini(message)
 
-        # 👉 fallback якщо треба
+        # 🔁 fallback якщо Gemini недоступний
         if not reply:
             reply = get_fallback_response(user, message)
 
         if not reply:
             reply = "..."
 
-        # 💥 тільки URL encode
+        # 🔒 правильне кодування
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(
             response=json.dumps({"reply": safe_reply}),
             status=200,
-            mimetype='application/json'
+            mimetype="application/json"
         )
 
     except Exception as e:
-        print("ERROR:", e)
+        print("CHAT ERROR:", e)
+
         return app.response_class(
             response=json.dumps({"reply": "error"}),
             status=200,
-            mimetype='application/json'
+            mimetype="application/json"
         )
 
 
 @app.route("/")
 def home():
-    return "Luna AI running 🔥"
+    return "Luna AI is running 🔥"
 
 
 if __name__ == "__main__":

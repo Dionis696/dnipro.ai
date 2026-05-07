@@ -3,23 +3,28 @@ import requests
 import os
 import json
 import urllib.parse
-from luna_brain import get_fallback_response
 
 app = Flask(__name__)
 
-print("🔥 LUNA SECURE VERSION 🔥")
+print("🔥 GEMINI DEBUG VERSION 🔥")
 
-# 🔒 ключ тільки з Render Environment
+# 🔒 API KEY тільки з Render Environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 print("KEY LOADED:", "YES" if GEMINI_API_KEY else "NO")
 
 
-# 🤖 Gemini
+# 🤖 GEMINI
 def ask_gemini(message):
+
+    print("=== GEMINI START ===")
+    print("USER MESSAGE:", message)
+
     try:
+
         if not GEMINI_API_KEY:
-            return None
+            print("❌ NO API KEY")
+            return "ERROR: NO API KEY"
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
@@ -30,10 +35,7 @@ def ask_gemini(message):
                         {
                             "text": f"""
 Ти Luna — жива дівчина в клубі Dnipro.
-Відповідай природно, коротко, емоційно.
-Не повторюй одні й ті самі фрази.
-Іноді фліртуй.
-Не будь як бот.
+Відповідай коротко, живо і природно.
 
 Повідомлення:
 {message}
@@ -44,45 +46,57 @@ def ask_gemini(message):
             ]
         }
 
-        r = requests.post(url, json=data, timeout=10)
+        print("📤 SENDING TO GEMINI...")
+
+        r = requests.post(url, json=data, timeout=15)
+
+        print("📥 STATUS:", r.status_code)
+        print("📥 RESPONSE:", r.text)
 
         if r.status_code != 200:
-            print("GEMINI ERROR:", r.status_code)
-            return None
+            return f"GEMINI ERROR {r.status_code}"
 
         res = r.json()
 
         if "candidates" not in res:
-            print("BAD RESPONSE")
-            return None
+            return "NO CANDIDATES IN RESPONSE"
 
-        return res["candidates"][0]["content"]["parts"][0]["text"].strip()
+        reply = res["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        print("✅ GEMINI REPLY:", reply)
+
+        return reply
 
     except Exception as e:
-        print("EXCEPTION:", e)
-        return None
+
+        print("💥 EXCEPTION:", str(e))
+
+        return f"EXCEPTION: {str(e)}"
 
 
-# 💬 Chat
+# 💬 CHAT
 @app.route("/chat", methods=["POST"])
 def chat():
+
+    print("🚨 CHAT FUNCTION WORKING 🚨")
+
     try:
+
         data = request.json
 
         user = data.get("user", "User")
         message = data.get("message", "")
 
-        # 🤖 пробуємо Gemini
+        print("USER:", user)
+        print("MESSAGE:", message)
+
+        # 🤖 ТІЛЬКИ GEMINI
         reply = ask_gemini(message)
 
-        # 🔁 fallback якщо Gemini недоступний
         if not reply:
-            reply = get_fallback_response(user, message)
+            reply = "EMPTY RESPONSE"
 
-        if not reply:
-            reply = "..."
-
-        # 🔒 правильне кодування
+        # 🔒 UTF FIX
         safe_reply = urllib.parse.quote(reply)
 
         return app.response_class(
@@ -92,10 +106,13 @@ def chat():
         )
 
     except Exception as e:
-        print("CHAT ERROR:", e)
+
+        print("💥 CHAT ERROR:", str(e))
+
+        safe_reply = urllib.parse.quote(str(e))
 
         return app.response_class(
-            response=json.dumps({"reply": "error"}),
+            response=json.dumps({"reply": safe_reply}),
             status=200,
             mimetype="application/json"
         )
@@ -103,7 +120,7 @@ def chat():
 
 @app.route("/")
 def home():
-    return "Luna AI is running 🔥"
+    return "Luna Debug Server Running 🔥"
 
 
 if __name__ == "__main__":

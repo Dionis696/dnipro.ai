@@ -2,10 +2,8 @@ import random
 import re
 import time
 
-from luna_memory import learn_from_chat, get_random_memory, get_user_style
-
 # =========================
-# 📚 BOOK
+# 📚 БАЗА ФРАЗ
 # =========================
 
 book_lines = []
@@ -21,148 +19,104 @@ def load_book():
 load_book()
 
 # =========================
-# 🎧 DJ LIST
+# 🧠 СТАН
 # =========================
 
-dj_list = [
-    "DJ дядя Жора",
-    "DJ Tomas",
-    "DJ Demnius"
-]
+last_time = 0
+COOLDOWN = 3
+
+luna_mode = "normal"  # normal / peak / idle
+last_activity = time.time()
 
 # =========================
-# 🧠 STATE
-# =========================
-
-last_reply_time = 0
-COOLDOWN = 4
-
-luna_state = {
-    "mode": "normal",   # normal / peak / idle
-    "last_activity": time.time()
-}
-
-# =========================
-# 🚫 FILTER
-# =========================
-
-def should_ignore(msg):
-    if len(msg) > 200:
-        return True
-    return False
-
-
-def detect_lang(msg):
-    if re.search(r"[a-zA-Z]", msg):
-        return "EN"
-    if re.search(r"[а-яА-Я]", msg):
-        return "UA"
-    return "UA"
-
-
-# =========================
-# 🔥 PEAK DETECTOR
+# 🎧 DJ / PEAK DETECT
 # =========================
 
 def is_peak(msg):
-    triggers = ["DJ", "Club", "☆", "★", "ıllı", "▓", "✪"]
-    return any(t in msg for t in triggers)
-
-
-def update_mode(msg):
-    if is_peak(msg):
-        luna_state["mode"] = "peak"
-    else:
-        if time.time() - luna_state["last_activity"] > 600:
-            luna_state["mode"] = "idle"
-        else:
-            luna_state["mode"] = "normal"
-
+    keywords = ["DJ", "Club", "☆", "★", "ıllı", "▓", "✪", "COMЕ", "█"]
+    return any(k in msg for k in keywords)
 
 # =========================
-# 💬 RESPONSE
+# 🌍 МОВА (простий режим)
 # =========================
 
-def pick_line():
+def detect_lang(text):
+    if re.search(r"[a-zA-Z]", text):
+        return "EN"
+    return "UA"
+
+# =========================
+# 💬 ВИБІР ФРАЗИ
+# =========================
+
+def pick():
     if not book_lines:
-        return "..."
-
+        return "я тут 🙂"
     return random.choice(book_lines)
 
-
-def maybe_add_dj(text):
-    if random.random() < 0.3:
-        text += " " + random.choice(dj_list)
-    return text
-
-
 # =========================
-# 💤 IDLE MODE
+# 💤 IDLE
 # =========================
 
-idle_lines = [
+idle_phrases = [
     "в клубі трохи тихо сьогодні",
     "де всі пропали?",
     "DJ мовчить сьогодні",
     "давайте трохи руху",
-    "цей вечір спокійний"
+    "тиша якась цікава"
 ]
 
-
-def idle_reply():
-    return random.choice(idle_lines)
-
+def idle():
+    return random.choice(idle_phrases)
 
 # =========================
 # 🧠 MAIN ENGINE
 # =========================
 
 def process_luna_message(user, msg):
-    global last_reply_time
+    global last_time, luna_mode, last_activity
 
     now = time.time()
 
     # cooldown
-    if now - last_reply_time < COOLDOWN:
+    if now - last_time < COOLDOWN:
         return ""
 
-    if should_ignore(msg):
+    if not msg:
         return ""
 
-    # memory learning
-    learn_from_chat(user, msg)
+    msg_low = msg.lower()
 
-    update_mode(msg)
-    luna_state["last_activity"] = now
+    # оновлення активності
+    last_activity = now
 
-    lang = detect_lang(msg)
+    # PEAK MODE
+    if is_peak(msg):
+        luna_mode = "peak"
+    else:
+        if now - last_activity > 600:
+            luna_mode = "idle"
+        else:
+            luna_mode = "normal"
 
-    # ❌ якщо не звернулись — мовчить (важливо як ти хотів)
-    if "luna" not in msg.lower() and "луна" not in msg.lower():
-        if luna_state["mode"] == "idle" and random.random() < 0.2:
-            last_reply_time = now
-            return idle_reply()
+    # ❗ ВАЖЛИВО: реагуємо тільки на "luna"
+    if "luna" not in msg_low and "луна" not in msg_low:
+
+        # idle іноді говорить
+        if luna_mode == "idle" and random.random() < 0.2:
+            last_time = now
+            return idle()
+
         return ""
 
-    # 🔥 PEAK MODE
-    if luna_state["mode"] == "peak":
-        reply = pick_line()
-        reply = maybe_add_dj(reply)
-
-        # інколи вставляє пам’ять
-        mem = get_random_memory()
-        if mem and random.random() < 0.3:
-            reply += "\n" + mem.split("] ", 1)[-1]
-
-        last_reply_time = now
+    # 🔥 PEAK
+    if luna_mode == "peak":
+        reply = pick()
+        last_time = now
         return reply
 
-    # 💬 NORMAL MODE
-    reply = pick_line()
+    # 💬 NORMAL
+    reply = pick()
 
-    mem = get_random_memory()
-    if mem and random.random() < 0.2:
-        reply += "\n" + mem.split("] ", 1)[-1]
-
-    last_reply_time = now
+    last_time = now
     return reply

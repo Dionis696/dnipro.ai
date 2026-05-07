@@ -1,10 +1,6 @@
 import random
-import re
 import time
-
-# =========================
-# 📚 БАЗА ФРАЗ
-# =========================
+import re
 
 book_lines = []
 
@@ -14,71 +10,44 @@ def load_book():
         with open("luna_book_big.txt", "r", encoding="utf-8") as f:
             book_lines = [x.strip() for x in f if x.strip()]
     except:
-        book_lines = []
+        book_lines = ["я тут 🙂"]
 
 load_book()
-
-# =========================
-# 🧠 СТАН
-# =========================
 
 last_time = 0
 COOLDOWN = 3
 
-luna_mode = "normal"  # normal / peak / idle
+mode = "normal"
 last_activity = time.time()
 
-# =========================
-# 🎧 DJ / PEAK DETECT
-# =========================
 
 def is_peak(msg):
-    keywords = ["DJ", "Club", "☆", "★", "ıllı", "▓", "✪", "COMЕ", "█"]
-    return any(k in msg for k in keywords)
+    triggers = ["DJ", "Club", "☆", "★", "ıllı", "▓", "✪"]
+    return any(t in msg for t in triggers)
 
-# =========================
-# 🌍 МОВА (простий режим)
-# =========================
-
-def detect_lang(text):
-    if re.search(r"[a-zA-Z]", text):
-        return "EN"
-    return "UA"
-
-# =========================
-# 💬 ВИБІР ФРАЗИ
-# =========================
 
 def pick():
     if not book_lines:
         return "я тут 🙂"
     return random.choice(book_lines)
 
-# =========================
-# 💤 IDLE
-# =========================
-
-idle_phrases = [
-    "в клубі трохи тихо сьогодні",
-    "де всі пропали?",
-    "DJ мовчить сьогодні",
-    "давайте трохи руху",
-    "тиша якась цікава"
-]
 
 def idle():
-    return random.choice(idle_phrases)
+    return random.choice([
+        "в клубі тихо…",
+        "де всі?",
+        "DJ сьогодні мовчить",
+        "дивний спокій",
+        "давайте рух"
+    ])
 
-# =========================
-# 🧠 MAIN ENGINE
-# =========================
 
 def process_luna_message(user, msg):
-    global last_time, luna_mode, last_activity
+    global last_time, mode, last_activity
 
     now = time.time()
 
-    # cooldown
+    # ❗ cooldown
     if now - last_time < COOLDOWN:
         return ""
 
@@ -86,37 +55,29 @@ def process_luna_message(user, msg):
         return ""
 
     msg_low = msg.lower()
-
-    # оновлення активності
     last_activity = now
 
-    # PEAK MODE
+    # режим
     if is_peak(msg):
-        luna_mode = "peak"
+        mode = "peak"
+    elif now - last_activity > 600:
+        mode = "idle"
     else:
-        if now - last_activity > 600:
-            luna_mode = "idle"
-        else:
-            luna_mode = "normal"
+        mode = "normal"
 
-    # ❗ ВАЖЛИВО: реагуємо тільки на "luna"
-    if "luna" not in msg_low and "луна" not in msg_low:
-
-        # idle іноді говорить
-        if luna_mode == "idle" and random.random() < 0.2:
-            last_time = now
-            return idle()
-
-        return ""
-
-    # 🔥 PEAK
-    if luna_mode == "peak":
-        reply = pick()
+    # 🎯 пряме звернення
+    if "luna" in msg_low or "луна" in msg_low:
         last_time = now
-        return reply
+        return pick()
 
-    # 💬 NORMAL
-    reply = pick()
+    # 🔥 peak інколи
+    if mode == "peak" and random.random() < 0.25:
+        last_time = now
+        return pick()
 
-    last_time = now
-    return reply
+    # 💤 idle інколи
+    if mode == "idle" and random.random() < 0.15:
+        last_time = now
+        return idle()
+
+    return ""

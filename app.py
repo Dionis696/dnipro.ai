@@ -1,7 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, Response
+import json
 from luna_brain import process_luna_message
 
 app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Luna is alive 💃"
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -12,12 +17,11 @@ def chat():
 
     reply = process_luna_message(user, message)
 
-    return jsonify({"reply": reply})
-
-
-@app.route('/')
-def home():
-    return "Luna is alive 💃"
+    # 🔥 ГОЛОВНИЙ ФІКС: правильний UTF-8 без u044f
+    return Response(
+        json.dumps({"reply": reply}, ensure_ascii=False),
+        mimetype="application/json; charset=utf-8"
+    )
 
 
 if __name__ == '__main__':

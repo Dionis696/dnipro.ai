@@ -2,7 +2,7 @@ import random
 import re
 
 # =========================
-# 🧠 MEMORY (проста)
+# 🧠 MEMORY
 # =========================
 user_memory = {}
 
@@ -10,299 +10,63 @@ def remember(user, message):
     if user not in user_memory:
         user_memory[user] = []
     user_memory[user].append(message)
-    user_memory[user] = user_memory[user][-5:]  # останні 5
+    user_memory[user] = user_memory[user][-5:]
 
 
 # =========================
-# 🌍 LANGUAGE (простий режим)
+# 🌍 LANGUAGE DETECTION
 # =========================
 def detect_language(text):
     text = text.lower()
 
-    if re.search(r"[а-щьюяєіїґ]", text):
-        return "UA"
-    if re.search(r"[a-z]", text):
-        return "EN"
+    ua = len(re.findall(r"[а-щьюяєіїґ]", text))
+    ru = len(re.findall(r"[а-яё]", text))
+    en = len(re.findall(r"[a-z]", text))
 
+    if en > ua and en > ru:
+        return "EN"
+    if ru > ua and ru > en:
+        return "RU"
     return "UA"
 
 
 # =========================
-# 🎭 CHARACTER (LUNA STYLE)
+# 🎭 LUNA PERSONALITY BANK
 # =========================
 
-greetings = [
-    "привіт 😏 я тут",
-    "йо 💃 заходь у ритм",
-    "хей 🔥 ніч почалась",
-    ♪ MUSIC IN THE AIR 🎧
-музика живе 🎧
-ніч тільки починається 🔥
-відчуй цей ритм 💃
-dance like nobody is watching 😏
-good vibes only ✨
-💃 танцпол оживає 🔥
-ніч тільки починається 😉
-бас вже відчуваєш? 😏
-сьогодні буде гаряче 🔥
-не стій — рухайся 💃
-ритм уже всередині 😎
-лови вайб 🎶
-музика говорить замість слів 🎧
-цей біт тебе знайде 😏
-всі на танцпол 💃🔥
-ніч без правил 😎
-включайся в атмосферу 🎶
-сьогодні без гальм 😉
-рухайся як відчуваєш 💃
-бас качає 🔥
-все тільки починається 😏
-тут своя реальність 🎧
-ніч довга 😉
-музика веде 💃
-пульс клубу б'ється 🔥
-ти вже в ритмі? 😎
-цей звук не відпустить 🎶
-енергія росте 🔥
-не зупиняйся 💃
-цей вечір наш 😉
-відпусти себе 😏
-музика тут головна 🎧
-ніч набирає обертів 🔥
-лови момент 😎
-ще трохи і розрив 💃🔥
-клуб дихає музикою 🎶
-ритм в крові 😏
-відчуй це 🔥
-танцпол чекає 💃
-ти частина цього 😉
-ніч палає 🔥
-музика жива 🎧
-погнали 😎
-рухайся 🔥
-не гальмуй 💃
-давай ще 🔥
-піднімай настрій 😉
-цей звук для тебе 🎶
-лови кайф 😏
-ніч твоя 😎
-енергія всюди 🔥
-давай драйв 💃
-ще один трек і полетіли 🎧
-ти в темі 😉
-музика рулить 😏
-кайфуй 😎
-все тільки почалось 🔥
-запалюємо 💃
-рухайся сильніше 🔥
-це вже не зупинити 😏
-ніч вогонь 🔥
-танцюй 😉
-включайся 💃
-давай ще 💥
-всі разом 🔥
-цей момент зараз 😎
-не випадай з ритму 🎶
-відрив почався 🔥
-все по кайфу 😏
-пульс росте 💃
-рухайся глибше 🔥
-ніч живе 😎
-лови звук 🎧
-танцпол горить 🔥
-вже не спинити 💃
-ти це відчуваєш 😏
-давай голосніше 🔥
-цей вайб твій 😎
-музика тут головна 💃
-ще більше драйву 🔥
-відпусти контроль 😏
-ніч не спить 😎
-цей звук качає 🔥
-давай разом 💃
-включай серце 🎧
-танцюй як хочеш 😏
-музика веде 🔥
-не думай — рухайся 💃
-ніч твого стилю 😎
-лови цей стан 🔥
-ти в грі 😉
-давай більше 💃
-кайф росте 🔥
-енергія тут 😎
-музика рулить 💃
-ще один трек 🔥
-відчуй ніч 😏
-всі на вайбі 😎
-цей звук гіпнотизує 🔥
-рухайся плавно 💃
-ніч набирає 🔥
-ти в центрі 😏
-давай ще кач 🔥
-музика в серці 💃
-цей момент твій 😎
-кайфуй максимально 🔥
-ніч тільки твоя 😉
-рухайся без меж 💃
-давай ще енергії 🔥
-музика не відпускає 😏
-цей вайб топ 😎
-ще трохи і вибух 💥
-клуб качає 🔥
-ти це відчуваєш 💃
-давай ще 😉
-ніч в темі 😎
-музика рулить 🔥
-лови ритм 💃
-енергія максимальна 🔥
-ти в атмосфері 😏
-давай кач 💃
-ще більше 🔥
-ніч гаряча 😎
-музика сильна 🔥
-рухайся 😉
-кайфуй 💃
-цей звук 🔥
-давай разом 😎
-ніч топ 🔥
-всі танцюють 💃
-ще більше драйву 🔥
-ти це любиш 😏
-музика тут 😎
-давай ще 💃
-ніч кайф 🔥
-включайся 😏
-танцюй далі 💃
-ще трохи 🔥
-музика живе 😎
-кайф росте 🔥
-давай рух 💃
-ніч 🔥
+UA = {
+    "greet": ["привіт 😏", "йо 💃", "хей 🔥", "о, ти тут 😉"],
+    "music": ["цей бас зараз би зайшов 🔥", "музика вже в повітрі 🎧", "давай качати 💃"],
+    "react": ["цікаво 👀", "мм… відчуваю тебе 😏", "ще щось скажеш? 🔥"],
+    "default": ["я тут 😌", "слухаю тебе 💃", "вайб ловлю 🔥"]
+}
 
-]
+EN = {
+    "greet": ["hey 😏", "yo 💃", "hi 🔥"],
+    "music": ["we need bass 🔥", "music is alive 🎧", "let's vibe 💃"],
+    "react": ["interesting 👀", "I feel that 😏", "go on 🔥"],
+    "default": ["I'm here 😌", "listening 💃", "vibing 🔥"]
+}
 
-answers = [
-    "я просто ловлю вайб 😌",
-    "музика зараз говорить замість мене 🎧",
-    "ти в настрої чи тільки заходиш? 😏",
-]
-
-reactions = [
-    "цікаво 👀",
-    "мм… відчуваю тебе 😏",
-    "давай ще трохи ритму 💃",
-]
-
-music = [
-    "включила б зараз щось з басом 🔥",
-    "цей вечір просить танців 💃",
-    "ритм вже в повітрі 🎧",
-]
-
-fallback = [
-    "я тут 😌",
-    "слухаю тебе 💃",
-    "вайб ловлю 🔥",
-    music is alive 🎧
-feel the rhythm 🎶
-let’s go 🔥
-dance floor is calling 💃
-vibes are rising 😎
-this night is yours 😉
-feel the bass 🔥
-don’t stop now 💃
-energy is high 🔥
-keep moving 😏
-let the music guide you 🎧
-tonight is wild 🔥
-just dance 💃
-catch the vibe 😎
-music never stops 🎶
-feel it deeper 🔥
-move with the beat 💃
-night is on fire 🔥
-you feel that? 😏
-let’s make it loud 🔊
-no limits tonight 😎
-feel the energy 🔥
-dance like nobody’s watching 💃
-turn it up 🔊
-this is your moment 😏
-stay in the rhythm 🎶
-good vibes only 😎
-feel the groove 💃
-keep the vibe alive 🔥
-don’t think — just move 💃
-music in control 🎧
-let’s ride the beat 🔥
-night is getting crazy 😎
-feel the sound 🎶
-this is the vibe 😏
-dance mode on 💃
-keep it going 🔥
-just feel it 😎
-music takes over 🎧
-vibe check 🔥
-let’s move 💃
-turn the night up 🔊
-feel the power 🔥
-stay wild 😏
-this beat hits 🔥
-move your body 💃
-just enjoy 😎
-feel the moment 🎶
-let’s dance 🔥
-no sleep tonight 😏
-vibe is real 🔥
-keep dancing 💃
-music never lies 🎧
-this is fire 🔥
-stay on the floor 💃
-feel alive 😎
-let it go 🔥
-dance harder 💃
-feel every beat 🎶
-this night hits different 😏
-vibes don’t lie 😎
-just move 🔥
-keep it smooth 💃
-night vibes 🔥
-let’s get lost 🎶
-feel the drop 🔥
-dance all night 💃
-energy overload 🔥
-you’re in it now 😏
-stay in the zone 😎
-music vibes 🔥
-feel that bass 💃
-just ride it 🎶
-let’s go deeper 🔥
-keep the fire 🔥
-dance with me 💃
-vibe is strong 😎
-feel the heat 🔥
-stay in motion 💃
-music flows 🎧
-this is the moment 😏
-keep the rhythm 🔥
-dance energy 💃
-let’s go wild 🔥
-feel the vibe 🎶
-don’t stop the flow 💃
-this is your vibe 😎
-just move on 🔥
-night energy 💃
-feel the sound 🔊
-let’s go higher 🔥
-stay in vibe 😏
-music power 🔥
-dance flow 💃
-]
+RU = {
+    "greet": ["привет 😏", "йо 💃", "хей 🔥"],
+    "music": ["нужен бас 🔥", "музыка жива 🎧", "давай кач 💃"],
+    "react": ["интересно 👀", "чувствую вайб 😏", "продолжай 🔥"],
+    "default": ["я тут 😌", "слушаю 💃", "ловлю вайб 🔥"]
+}
 
 
 # =========================
-# 🧠 MAIN BRAIN (ЖИВА ЛУНА)
+# 🧠 CORE ENGINE
 # =========================
+def pick(lang, key):
+    if lang == "EN":
+        return random.choice(EN[key])
+    if lang == "RU":
+        return random.choice(RU[key])
+    return random.choice(UA[key])
+
+
 def process_luna_message(user, message):
     if not message:
         return "..."
@@ -312,21 +76,17 @@ def process_luna_message(user, message):
     msg = message.lower()
     lang = detect_language(msg)
 
-    # ===== greetings =====
-    if any(w in msg for w in ["привіт", "hi", "hello"]):
-        return random.choice(greetings)
+    # ===== GREET =====
+    if any(x in msg for x in ["привіт", "hi", "hello", "привет"]):
+        return pick(lang, "greet")
 
-    # ===== music =====
-    if any(w in msg for w in ["муз", "music", "трек", "dj"]):
-        return random.choice(music)
+    # ===== MUSIC =====
+    if any(x in msg for x in ["муз", "music", "dj", "трек"]):
+        return pick(lang, "music")
 
-    # ===== question / interaction =====
+    # ===== QUESTION =====
     if "?" in msg:
-        return random.choice(reactions)
+        return pick(lang, "react")
 
-    # ===== vibe talk =====
-    if len(msg) < 5:
-        return random.choice(fallback)
-
-    # ===== default personality =====
-    return random.choice(answers)
+    # ===== DEFAULT =====
+    return pick(lang, "default")

@@ -15,5 +15,10 @@ def chat():
     return jsonify({"reply": reply})
 
 
+@app.route('/')
+def home():
+    return "Luna is alive 💃"
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)

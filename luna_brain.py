@@ -2,22 +2,7 @@ import random
 import re
 import time
 
-# =========================
-# 🧠 MEMORY SYSTEM
-# =========================
-
-users = {}
-user_phrases = {}
-last_messages = {}
-last_reply_time = 0
-
-COOLDOWN = 4
-IDLE_TIME = 600  # 10 хв
-
-luna_state = {
-    "mode": "normal",  # normal / peak / admin
-    "last_activity": time.time()
-}
+from luna_memory import learn_from_chat, get_random_memory, get_user_style
 
 # =========================
 # 📚 BOOK
@@ -39,34 +24,26 @@ load_book()
 # 🎧 DJ LIST
 # =========================
 
-dj_names = [
+dj_list = [
     "DJ дядя Жора",
-    "DJ Дюна",
-    "DJ Demnius",
+    "DJ Tomas",
+    "DJ Demnius"
 ]
 
 # =========================
-# 🧠 MEMORY
+# 🧠 STATE
 # =========================
 
-def remember_user(user):
-    if user not in users:
-        users[user] = {"count": 0, "last_seen": time.time()}
-    users[user]["count"] += 1
-    users[user]["last_seen"] = time.time()
+last_reply_time = 0
+COOLDOWN = 4
 
-
-def remember_phrase(user, msg):
-    if len(msg) < 5:
-        return
-    if user not in user_phrases:
-        user_phrases[user] = []
-    if len(user_phrases[user]) < 10:
-        user_phrases[user].append(msg)
-
+luna_state = {
+    "mode": "normal",   # normal / peak / idle
+    "last_activity": time.time()
+}
 
 # =========================
-# 🚫 FILTERS
+# 🚫 FILTER
 # =========================
 
 def should_ignore(msg):
@@ -75,7 +52,7 @@ def should_ignore(msg):
     return False
 
 
-def detect_language(msg):
+def detect_lang(msg):
     if re.search(r"[a-zA-Z]", msg):
         return "EN"
     if re.search(r"[а-яА-Я]", msg):
@@ -88,27 +65,25 @@ def detect_language(msg):
 # =========================
 
 def is_peak(msg):
-    keywords = ["DJ", "Club", "☆", "★", "ıllı", "▓"]
-    return any(k in msg for k in keywords)
+    triggers = ["DJ", "Club", "☆", "★", "ıllı", "▓", "✪"]
+    return any(t in msg for t in triggers)
 
 
 def update_mode(msg):
-    global luna_state
-
     if is_peak(msg):
         luna_state["mode"] = "peak"
     else:
-        if time.time() - luna_state["last_activity"] > IDLE_TIME:
+        if time.time() - luna_state["last_activity"] > 600:
             luna_state["mode"] = "idle"
         else:
             luna_state["mode"] = "normal"
 
 
 # =========================
-# 💬 RESPONSE PICKER
+# 💬 RESPONSE
 # =========================
 
-def pick_response():
+def pick_line():
     if not book_lines:
         return "..."
 
@@ -117,7 +92,7 @@ def pick_response():
 
 def maybe_add_dj(text):
     if random.random() < 0.3:
-        return text + " " + random.choice(dj_names)
+        text += " " + random.choice(dj_list)
     return text
 
 
@@ -125,17 +100,17 @@ def maybe_add_dj(text):
 # 💤 IDLE MODE
 # =========================
 
-idle_phrases = [
-    "в клубі якось тихо сьогодні",
+idle_lines = [
+    "в клубі трохи тихо сьогодні",
     "де всі пропали?",
-    "DJ сьогодні мовчить",
+    "DJ мовчить сьогодні",
     "давайте трохи руху",
-    "тиша навіть музика чується інакше"
+    "цей вечір спокійний"
 ]
 
 
-def idle_message():
-    return random.choice(idle_phrases)
+def idle_reply():
+    return random.choice(idle_lines)
 
 
 # =========================
@@ -145,43 +120,49 @@ def idle_message():
 def process_luna_message(user, msg):
     global last_reply_time
 
-    remember_user(user)
-    remember_phrase(user, msg)
-
-    update_mode(msg)
-    luna_state["last_activity"] = time.time()
-
     now = time.time()
 
-    # ❌ cooldown
+    # cooldown
     if now - last_reply_time < COOLDOWN:
         return ""
 
-    # ❌ ignore spam
     if should_ignore(msg):
         return ""
 
-    # 👇 реагує тільки якщо звернення
+    # memory learning
+    learn_from_chat(user, msg)
+
+    update_mode(msg)
+    luna_state["last_activity"] = now
+
+    lang = detect_lang(msg)
+
+    # ❌ якщо не звернулись — мовчить (важливо як ти хотів)
     if "luna" not in msg.lower() and "луна" not in msg.lower():
-        # idle logic
         if luna_state["mode"] == "idle" and random.random() < 0.2:
             last_reply_time = now
-            return idle_message()
+            return idle_reply()
         return ""
 
-    # 🔥 peak mode
+    # 🔥 PEAK MODE
     if luna_state["mode"] == "peak":
-        reply = pick_response()
+        reply = pick_line()
         reply = maybe_add_dj(reply)
+
+        # інколи вставляє пам’ять
+        mem = get_random_memory()
+        if mem and random.random() < 0.3:
+            reply += "\n" + mem.split("] ", 1)[-1]
+
         last_reply_time = now
         return reply
 
-    # 💬 normal mode
-    reply = pick_response()
+    # 💬 NORMAL MODE
+    reply = pick_line()
 
-    # іноді вставляє фразу користувача
-    if user in user_phrases and random.random() < 0.3:
-        reply += " — " + random.choice(user_phrases[user])
+    mem = get_random_memory()
+    if mem and random.random() < 0.2:
+        reply += "\n" + mem.split("] ", 1)[-1]
 
     last_reply_time = now
     return reply

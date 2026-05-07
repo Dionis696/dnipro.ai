@@ -1,119 +1,187 @@
 import random
 import re
+import time
 
-# =====================
-# ПАМ'ЯТЬ
-# =====================
+# =========================
+# 🧠 MEMORY SYSTEM
+# =========================
+
 users = {}
+user_phrases = {}
+last_messages = {}
+last_reply_time = 0
 
-def update_user_memory(user, message):
-    if user not in users:
-        users[user] = {"count": 0}
-    users[user]["count"] += 1
+COOLDOWN = 4
+IDLE_TIME = 600  # 10 хв
 
+luna_state = {
+    "mode": "normal",  # normal / peak / admin
+    "last_activity": time.time()
+}
 
-# =====================
-# МОВА
-# =====================
-def detect_language(text):
-    if re.search(r"[a-zA-Z]", text):
-        return "EN"
-    if re.search(r"[а-яА-ЯёЁ]", text):
-        return "UA"
-    return "UA"
+# =========================
+# 📚 BOOK
+# =========================
 
-
-# =====================
-# ІГНОР
-# =====================
-def should_ignore(text):
-    if len(text) > 150:
-        return True
-    return False
-
-
-# =====================
-# ЗАГРУЗКА КНИГИ
-# =====================
 book_lines = []
 
 def load_book():
     global book_lines
     try:
-        with open("luna_book.txt", "r", encoding="utf-8") as f:
-            book_lines = [l.strip() for l in f if l.strip()]
+        with open("luna_book_big.txt", "r", encoding="utf-8") as f:
+            book_lines = [x.strip() for x in f if x.strip()]
     except:
         book_lines = []
 
 load_book()
 
+# =========================
+# 🎧 DJ LIST
+# =========================
 
-# =====================
-# ЛОГІКА ВІДПОВІДІ
-# =====================
-def process_luna_message(user, message):
-    msg = message.lower()
+dj_names = [
+    "DJ дядя Жора",
+    "DJ Дюна",
+    "DJ Demnius",
+]
 
-    update_user_memory(user, message)
+# =========================
+# 🧠 MEMORY
+# =========================
 
+def remember_user(user):
+    if user not in users:
+        users[user] = {"count": 0, "last_seen": time.time()}
+    users[user]["count"] += 1
+    users[user]["last_seen"] = time.time()
+
+
+def remember_phrase(user, msg):
+    if len(msg) < 5:
+        return
+    if user not in user_phrases:
+        user_phrases[user] = []
+    if len(user_phrases[user]) < 10:
+        user_phrases[user].append(msg)
+
+
+# =========================
+# 🚫 FILTERS
+# =========================
+
+def should_ignore(msg):
+    if len(msg) > 200:
+        return True
+    return False
+
+
+def detect_language(msg):
+    if re.search(r"[a-zA-Z]", msg):
+        return "EN"
+    if re.search(r"[а-яА-Я]", msg):
+        return "UA"
+    return "UA"
+
+
+# =========================
+# 🔥 PEAK DETECTOR
+# =========================
+
+def is_peak(msg):
+    keywords = ["DJ", "Club", "☆", "★", "ıllı", "▓"]
+    return any(k in msg for k in keywords)
+
+
+def update_mode(msg):
+    global luna_state
+
+    if is_peak(msg):
+        luna_state["mode"] = "peak"
+    else:
+        if time.time() - luna_state["last_activity"] > IDLE_TIME:
+            luna_state["mode"] = "idle"
+        else:
+            luna_state["mode"] = "normal"
+
+
+# =========================
+# 💬 RESPONSE PICKER
+# =========================
+
+def pick_response():
+    if not book_lines:
+        return "..."
+
+    return random.choice(book_lines)
+
+
+def maybe_add_dj(text):
+    if random.random() < 0.3:
+        return text + " " + random.choice(dj_names)
+    return text
+
+
+# =========================
+# 💤 IDLE MODE
+# =========================
+
+idle_phrases = [
+    "в клубі якось тихо сьогодні",
+    "де всі пропали?",
+    "DJ сьогодні мовчить",
+    "давайте трохи руху",
+    "тиша навіть музика чується інакше"
+]
+
+
+def idle_message():
+    return random.choice(idle_phrases)
+
+
+# =========================
+# 🧠 MAIN ENGINE
+# =========================
+
+def process_luna_message(user, msg):
+    global last_reply_time
+
+    remember_user(user)
+    remember_phrase(user, msg)
+
+    update_mode(msg)
+    luna_state["last_activity"] = time.time()
+
+    now = time.time()
+
+    # ❌ cooldown
+    if now - last_reply_time < COOLDOWN:
+        return ""
+
+    # ❌ ignore spam
     if should_ignore(msg):
-        return "ти щось дуже довге написав 😌"
+        return ""
 
-    # =====================
-    # 70% — BOOK SYSTEM
-    # =====================
-    if book_lines and random.random() < 0.7:
-        base = random.choice(book_lines)
+    # 👇 реагує тільки якщо звернення
+    if "luna" not in msg.lower() and "луна" not in msg.lower():
+        # idle logic
+        if luna_state["mode"] == "idle" and random.random() < 0.2:
+            last_reply_time = now
+            return idle_message()
+        return ""
 
-        # іноді додаємо “живу реакцію”
-        if random.random() < 0.3:
-            base += "\n" + random.choice([
-                "я тут 😌",
-                "ти сьогодні активний 😏",
-                "я це запам’ятаю 💃",
-                "не зупиняй вайб 🔥"
-            ])
+    # 🔥 peak mode
+    if luna_state["mode"] == "peak":
+        reply = pick_response()
+        reply = maybe_add_dj(reply)
+        last_reply_time = now
+        return reply
 
-        return base
+    # 💬 normal mode
+    reply = pick_response()
 
-    # =====================
-    # 20% — ЛОГІКА
-    # =====================
-    if "привіт" in msg:
-        return random.choice([
-            "привіт 😌 рада тебе бачити",
-            "йо 😏 ти як тут?",
-            "хей 💃 заходь в вайб"
-        ])
+    # іноді вставляє фразу користувача
+    if user in user_phrases and random.random() < 0.3:
+        reply += " — " + random.choice(user_phrases[user])
 
-    if "як" in msg:
-        return random.choice([
-            "нормально 😌 музика грає",
-            "ловлю вайб 💃",
-            "все ок, клуб живе 🔥"
-        ])
-
-    if "?" in msg:
-        return random.choice([
-            "цікаве питання 😏",
-            "ти сьогодні думаєш глибоко 👀",
-            "мм… я подумаю над цим"
-        ])
-
-    # =====================
-    # 10% — ГУМОР / ІСТОРІЇ
-    # =====================
-    if random.random() < 0.5:
-        return random.choice([
-            "я колись сказала DJ що трек не качає… мене вимкнули 😏",
-            "один танцпол так качався, що ми думали землетрус 💃🔥",
-            "тут навіть стіни танцюють 😌",
-            "я не пліткую… я просто знаю все 😏"
-        ])
-
-    # fallback
-    return random.choice([
-        "я тут 😌",
-        "ловлю вайб 💃",
-        "музика говорить замість мене 🎧"
-    ])
+    last_reply_time = now
+    return reply

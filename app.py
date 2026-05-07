@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Luna OK"
+    return "Luna ONLINE"
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -16,7 +16,7 @@ def chat():
 
     reply = process_luna_message(user, message)
 
-    # ❗ ВАЖЛИВО: завжди повертаємо рядок
+    # ❗ якщо пусто — просто пусто (НЕ "...")
     if reply is None:
         reply = ""
 

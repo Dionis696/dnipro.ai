@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Luna AI is running"
+    return "Luna AI ONLINE"
 
 @app.route("/chat", methods=["POST"])
 def chat():

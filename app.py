@@ -1,26 +1,22 @@
-from flask import Flask, request, Response
-import json
+from flask import Flask, request, jsonify
 from luna_brain import process_luna_message
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Luna is alive 💃"
+    return "Luna AI is running"
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json or {}
 
-    user = data.get("user", "user")
+    user = data.get("user", "unknown")
     message = data.get("message", "")
 
     reply = process_luna_message(user, message)
 
-    return Response(
-        json.dumps({"reply": reply}, ensure_ascii=False),
-        mimetype="application/json; charset=utf-8"
-    )
+    return jsonify({"reply": reply})
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, Response
 from luna_brain import process_luna_message
+import json
 
 app = Flask(__name__)
 
@@ -16,12 +17,19 @@ def chat():
 
     reply = process_luna_message(user, message)
 
-    # ❗ якщо пусто — просто пусто (НЕ "...")
     if reply is None:
         reply = ""
 
-    return jsonify({"reply": reply})
+    # 🔥 ГОЛОВНИЙ ФІКС
+    response_data = json.dumps(
+        {"reply": reply},
+        ensure_ascii=False
+    )
 
+    return Response(
+        response_data,
+        content_type="application/json; charset=utf-8"
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

@@ -4,19 +4,19 @@ import re
 # =========================
 # 🧠 MEMORY
 # =========================
-user_memory = {}
+memory = {}
 
-def remember(user, message):
-    if user not in user_memory:
-        user_memory[user] = []
-    user_memory[user].append(message)
-    user_memory[user] = user_memory[user][-5:]
+def remember(user, msg):
+    if user not in memory:
+        memory[user] = []
+    memory[user].append(msg)
+    memory[user] = memory[user][-10:]
 
 
 # =========================
 # 🌍 LANGUAGE DETECTION
 # =========================
-def detect_language(text):
+def detect_lang(text):
     text = text.lower()
 
     ua = len(re.findall(r"[а-щьюяєіїґ]", text))
@@ -31,62 +31,73 @@ def detect_language(text):
 
 
 # =========================
-# 🎭 LUNA PERSONALITY BANK
+# 🎭 RESPONSES
 # =========================
 
-UA = {
-    "greet": ["привіт 😏", "йо 💃", "хей 🔥", "о, ти тут 😉"],
-    "music": ["цей бас зараз би зайшов 🔥", "музика вже в повітрі 🎧", "давай качати 💃"],
-    "react": ["цікаво 👀", "мм… відчуваю тебе 😏", "ще щось скажеш? 🔥"],
-    "default": ["я тут 😌", "слухаю тебе 💃", "вайб ловлю 🔥"]
-}
+UA = [
+    "я тут 😌",
+    "ловлю вайб 💃",
+    "цікаво 👀",
+    "продовжуй 😏",
+    "я тебе чую 🎧",
+]
 
-EN = {
-    "greet": ["hey 😏", "yo 💃", "hi 🔥"],
-    "music": ["we need bass 🔥", "music is alive 🎧", "let's vibe 💃"],
-    "react": ["interesting 👀", "I feel that 😏", "go on 🔥"],
-    "default": ["I'm here 😌", "listening 💃", "vibing 🔥"]
-}
+EN = [
+    "I'm here 😌",
+    "vibing 💃",
+    "interesting 👀",
+    "go on 😏",
+    "I hear you 🎧",
+]
 
-RU = {
-    "greet": ["привет 😏", "йо 💃", "хей 🔥"],
-    "music": ["нужен бас 🔥", "музыка жива 🎧", "давай кач 💃"],
-    "react": ["интересно 👀", "чувствую вайб 😏", "продолжай 🔥"],
-    "default": ["я тут 😌", "слушаю 💃", "ловлю вайб 🔥"]
-}
+RU = [
+    "я тут 😌",
+    "ловлю вайб 💃",
+    "интересно 👀",
+    "продолжай 😏",
+    "слышу тебя 🎧",
+]
 
 
 # =========================
-# 🧠 CORE ENGINE
+# 🧠 CORE FUNCTION
 # =========================
-def pick(lang, key):
-    if lang == "EN":
-        return random.choice(EN[key])
-    if lang == "RU":
-        return random.choice(RU[key])
-    return random.choice(UA[key])
-
-
 def process_luna_message(user, message):
     if not message:
-        return "..."
+        return ""
 
     remember(user, message)
 
     msg = message.lower()
-    lang = detect_language(msg)
+    lang = detect_lang(msg)
 
-    # ===== GREET =====
+    # 🔥 greetings
     if any(x in msg for x in ["привіт", "hi", "hello", "привет"]):
-        return pick(lang, "greet")
+        return random.choice({
+            "UA": ["привіт 😏", "йо 💃", "хей 🔥"],
+            "EN": ["hey 😏", "yo 💃", "hi 🔥"],
+            "RU": ["привет 😏", "йо 💃", "хей 🔥"]
+        }[lang])
 
-    # ===== MUSIC =====
-    if any(x in msg for x in ["муз", "music", "dj", "трек"]):
-        return pick(lang, "music")
+    # 🎧 music
+    if any(x in msg for x in ["муз", "music", "dj", "track", "трек"]):
+        return random.choice({
+            "UA": ["бас вже відчувається 🔥", "давай кач 💃"],
+            "EN": ["we need bass 🔥", "let's vibe 💃"],
+            "RU": ["нужен бас 🔥", "давай кач 💃"]
+        }[lang])
 
-    # ===== QUESTION =====
+    # ❓ question
     if "?" in msg:
-        return pick(lang, "react")
+        return random.choice({
+            "UA": ["мм цікаво 👀", "продовжуй 😏"],
+            "EN": ["interesting 👀", "go on 😏"],
+            "RU": ["интересно 👀", "продолжай 😏"]
+        }[lang])
 
-    # ===== DEFAULT =====
-    return pick(lang, "default")
+    # 🔁 default
+    if lang == "EN":
+        return random.choice(EN)
+    if lang == "RU":
+        return random.choice(RU)
+    return random.choice(UA)

@@ -9,14 +9,27 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.json or {}
+    try:
+        data = request.json or {}
 
-    user = data.get("user", "unknown")
-    message = data.get("message", "")
+        user = data.get("user", "unknown")
+        message = data.get("message", "")
 
-    reply = process_luna_message(user, message)
+        reply = process_luna_message(user, message)
 
-    return jsonify({"reply": reply})
+        # 🔥 ВАЖЛИВО: LSL НЕ ПОВИНЕН БАЧИТИ ПУСТОГО ВІДПОВІДІ
+        if reply is None or reply.strip() == "":
+            reply = "..."
+
+        return jsonify({
+            "reply": reply
+        })
+
+    except Exception as e:
+        # 🔥 ніколи не падаємо
+        return jsonify({
+            "reply": "..."
+        })
 
 
 if __name__ == "__main__":

@@ -5,16 +5,96 @@ import time
 from luna_memory import learn_from_chat, get_random_memory
 from luna_mixer import pick_response
 
-from luna_state import (
-    open_session,
-    in_session,
-    trigger_stop,
-    can_talk,
-    update_activity
-)
 
 # =========================
-# 🧠 LUNA BRAIN (STATE ENGINE v1)
+# 🧠 STATE
+# =========================
+
+active_session_user = None
+session_until = 0
+
+stop_until = 0
+last_activity_time = time.time()
+
+
+# =========================
+# 🟢 SESSION CONTROL
+# =========================
+
+def open_session(user):
+    global active_session_user, session_until
+
+    active_session_user = user
+    session_until = time.time() + 120  # 2 хв
+
+
+def in_session(user):
+    global active_session_user, session_until
+
+    return active_session_user == user and time.time() < session_until
+
+
+def update_activity():
+    global last_activity_time
+    last_activity_time = time.time()
+
+
+# =========================
+# 🔴 STOP SYSTEM
+# =========================
+
+def trigger_stop():
+    global stop_until
+    stop_until = time.time() + 600  # 10 хв
+
+
+def can_talk():
+    return time.time() >= stop_until
+
+
+# =========================
+# 🟡 IDLE MODE (10 min)
+# =========================
+
+def check_idle():
+    global last_activity_time
+
+    if time.time() - last_activity_time > 600:
+        update_activity()
+        return random.choice([
+            "клуб трохи затих… 😌",
+            "музика грає тихіше 🎧",
+            "ніч дивиться на танцпол 🌙",
+            "хтось ще тут? 👀",
+            "атмосфера зависла між треками"
+        ])
+
+    return None
+
+
+# =========================
+# 🌍 LANGUAGE (no spam EN)
+# =========================
+
+def detect_lang(text):
+    text = text.lower()
+
+    ua = len(re.findall(r"[іїєґ]", text))
+    ru = len(re.findall(r"[ыэъё]", text))
+    en = len(re.findall(r"[a-z]", text))
+
+    if ua > 0:
+        return "ua"
+    if ru > ua and ru > 0:
+        return "ru"
+    if en > 5:
+        return "en"
+
+    return "ua"
+
+
+# =========================
+# 🎭 MAIN BRAIN
 # =========================
 
 class LunaBrain:
@@ -30,57 +110,46 @@ class LunaBrain:
             self.book = []
 
     # =========================
-    # 🌍 LANGUAGE LOCK (no random EN spam)
-    # =========================
-
-    def detect_lang(self, text):
-        text = text.lower()
-
-        ua = len(re.findall(r"[іїєґ]", text))
-        ru = len(re.findall(r"[ыэъё]", text))
-        en = len(re.findall(r"[a-z]", text))
-
-        if ua > 0:
-            return "ua"
-        if ru > ua and ru > 0:
-            return "ru"
-        if en > 5:
-            return "en"
-
-        return "ua"
-
-    # =========================
-    # 💬 MAIN REPLY ENGINE
+    # 💬 REPLY ENGINE
     # =========================
 
     def reply(self, user, msg):
 
+        global stop_until, last_activity_time
+
         msg_l = msg.lower()
 
-        # 🔴 STOP MODE
+        # 🔴 STOP
         if "stop" in msg_l or "луна стоп" in msg_l:
             trigger_stop()
-            return "окей… я замовкаю 😌"
+            return "окей… мовчу 😌"
 
         if not can_talk():
             return ""
 
-        # 🟢 OPEN SESSION (якщо звернулись)
-        if "луна" in msg_l or "luna" in msg_l:
+        # 🟢 SESSION OPEN
+        trigger_words = ["луна", "luna", "hey luna", "эй луна"]
+
+        if any(w in msg_l for w in trigger_words):
             open_session(user)
 
-        # 🔵 якщо немає сесії — мовчить
+        # 🔵 session rule
         if not in_session(user):
+
+            # трохи “життя” без спаму
+            if random.random() < 0.05:
+                return random.choice([
+                    "я тут… 👀",
+                    "клуб слухає 🎧",
+                    "ти мене покликав? 😌"
+                ])
+
             return ""
 
-        # 🧠 activity update
         update_activity()
 
-        # 🧠 learn memory
+        # 🧠 learn
         learn_from_chat(user, msg)
-
-        # 🌍 language
-        lang = self.detect_lang(msg)
 
         # 📚 memory
         memory_raw = get_random_memory()
@@ -93,29 +162,26 @@ class LunaBrain:
         book_pick = random.choice(self.book) if self.book else ""
 
         # =========================
-        # 🎯 MIX CORE
+        # MIX
         # =========================
 
-        options = []
+        pool = []
 
         if memory:
-            options.append(memory)
+            pool.append(memory)
 
         if book_pick:
-            options.append(book_pick)
+            pool.append(book_pick)
 
-        if not options:
+        if not pool:
             return "я тут 😌"
 
-        response = pick_response(options, [], msg)
+        response = pick_response(pool, [], msg)
 
         if not response:
-            response = random.choice(options)
+            response = random.choice(pool)
 
-        # =========================
         # 🚫 anti repeat
-        # =========================
-
         if response == self.last_reply:
             response = random.choice([
                 "ти ще тут? 👀",
@@ -126,16 +192,14 @@ class LunaBrain:
 
         self.last_reply = response
 
-        # =========================
-        # 🌍 language safety (no random EN spam)
-        # =========================
-
-        if lang == "ua" and any(x in response.lower() for x in ["the ", "this ", "you "]):
-            response = random.choice([
-                "цікава атмосфера 😌",
-                "я тебе чую 👀",
-                "клуб живе своїм ритмом 🔥"
-            ])
+        # 🌍 language safety
+        if detect_lang(msg) == "ua":
+            if any(x in response.lower() for x in ["the ", "you ", "this "]):
+                response = random.choice([
+                    "цікава атмосфера 😌",
+                    "я тебе чую 👀",
+                    "клуб живе 🔥"
+                ])
 
         return response
 

@@ -1,113 +1,80 @@
 import random
-import time
 import os
-
-# =========================
-# FILES
-# =========================
 
 BOOK_FILE = "luna_book.txt"
 MEMORY_FILE = "luna_memory.txt"
 
 # =========================
-# MEMORY CACHE
-# =========================
-
-recent_replies = []
-user_memory = {}
-
-MAX_RECENT = 10
-
-# =========================
 # LOAD FILES
 # =========================
 
-def load_file(file_path):
-    if not os.path.exists(file_path):
+def load_file(path):
+    if not os.path.exists(path):
         return []
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
-def save_memory(line):
-    with open(MEMORY_FILE, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
+# =========================
+# CLEAN OUTPUT GUARD
+# =========================
+
+def clean(text):
+    bad = ["Resident", "undefined", "None", "null"]
+    for b in bad:
+        text = text.replace(b, "")
+    return text.strip()
 
 # =========================
-# INTENT DETECTION
+# PRIORITY ENGINE (ГОЛОВНЕ)
 # =========================
 
 def detect_intent(msg):
     msg = msg.lower()
 
+    # 1. QUESTION FIRST
     if "?" in msg:
         return "question"
 
-    if any(x in msg for x in ["вчора", "учора", "yesterday"]):
+    # 2. EVENT / DJ INFO
+    if any(x in msg for x in ["сьогодні", "сегодня", "tonight", "що буде", "what", "лайн", "lineup", "dj", "сет"]):
+        return "event"
+
+    # 3. MEMORY TRIGGER
+    if any(x in msg for x in ["вчора", "учора", "remember", "пам"]):
         return "memory"
 
-    if any(x in msg for x in ["dj", "муз", "сет"]):
-        return "dj"
-
+    # 4. CHAT
     return "chat"
 
 # =========================
-# RESPONSE PICKER
+# SAFE PICK (NO REPETITION)
 # =========================
 
-def pick_response(user, msg, intent):
+recent = []
 
-    global recent_replies
-
-    book = load_file(BOOK_FILE)
-    memory = load_file(MEMORY_FILE)
-
-    pool = []
-
-    # 70% book / 30% memory
-    if random.random() < 0.7:
-        pool += book
-    else:
-        pool += memory
+def pick(pool):
+    global recent
 
     if not pool:
         return "я тут 🙂"
 
-    available = [x for x in pool if x not in recent_replies]
+    options = [x for x in pool if x not in recent]
 
-    if not available:
-        recent_replies = []
-        available = pool
+    if not options:
+        recent.clear()
+        options = pool
 
-    reply = random.choice(available)
+    choice = random.choice(options)
 
-    recent_replies.append(reply)
+    recent.append(choice)
 
-    if len(recent_replies) > MAX_RECENT:
-        recent_replies.pop(0)
+    if len(recent) > 10:
+        recent.pop(0)
 
-    return reply
-
-# =========================
-# LEARNING SYSTEM
-# =========================
-
-def learn_from_user(user, msg):
-
-    msg_low = msg.lower()
-
-    # зберігаємо тільки цікаві фрази
-    if len(msg_low) > 15 and "?" not in msg_low:
-
-        save_memory(f"{user}: {msg}")
-
-        user_memory.setdefault(user, [])
-        user_memory[user].append(msg)
-
-        if len(user_memory[user]) > 20:
-            user_memory[user].pop(0)
+    return clean(choice)
 
 # =========================
-# MAIN ENGINE
+# MAIN BRAIN
 # =========================
 
 def process_luna_message(user, msg):
@@ -117,37 +84,74 @@ def process_luna_message(user, msg):
 
     msg_low = msg.lower()
 
+    book = load_file(BOOK_FILE)
+    memory = load_file(MEMORY_FILE)
+
     intent = detect_intent(msg_low)
 
     # =========================
-    # LEARN ALWAYS
+    # 1. QUESTION MODE (TOP PRIORITY)
     # =========================
+    if intent == "question":
 
-    learn_from_user(user, msg)
+        if "dj" in msg_low or "сет" in msg_low:
+            return pick([
+                "сьогодні ще уточнюють лайнап 😏",
+                "буде DJ сет пізніше 🔥",
+                "поки інтрига тримається"
+            ])
+
+        return pick([
+            "цікаве питання 😏",
+            "розкажи трохи більше",
+            "я слухаю тебе"
+        ])
 
     # =========================
-    # ACTIVE MODE
+    # 2. EVENT MODE (CLUB INFO)
     # =========================
+    if intent == "event":
 
+        pool = [
+            "сьогодні буде клубний вечір 🔥",
+            "DJ сет очікується сьогодні 😏",
+            "лайнап ще формується",
+            "вечір буде активний"
+        ]
+
+        # додаємо трохи book
+        pool += book[:20]
+
+        return pick(pool)
+
+    # =========================
+    # 3. MEMORY MODE
+    # =========================
+    if intent == "memory":
+
+        if memory:
+            return pick([
+                "пам’ятаю що ти про це згадував 😏",
+                "ти вже казав щось подібне",
+                "є відчуття знайомої історії"
+            ])
+
+        return "я це запам’ятаю 🙂"
+
+    # =========================
+    # 4. NORMAL CHAT MODE
+    # =========================
     if "luna" in msg_low or "луна" in msg_low:
 
-        # memory recall trigger
-        if intent == "memory":
-            return "пам’ятаю ти щось казав про це 😏"
+        pool = book + memory
 
-        if intent == "question":
-            return pick_response(user, msg, "chat")
-
-        if intent == "dj":
-            return pick_response(user, msg, "dj")
-
-        return pick_response(user, msg, "chat")
+        return pick(pool)
 
     # =========================
-    # IDLE MODE
+    # 5. IDLE MODE
     # =========================
-
     if random.random() < 0.02:
-        return pick_response(user, msg, "chat")
+        return pick(book)
 
     return ""
+    

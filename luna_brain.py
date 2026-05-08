@@ -175,15 +175,34 @@ class LunaBrain:
             pool.append(book_pick)
 
         if not pool:
-            return "я тут 😌"
+    return "я тут 😌"
 
-        response = pick_response(pool, [], msg)
+lang = detect_lang(msg)
 
-        if not response:
-            response = random.choice(pool)
+filtered_pool = []
 
-        # 🔁 anti repeat
-        if response == self.last_reply:
+for p in pool:
+    if lang == "ua" and re.search(r"[а-яіїєґ]", p.lower()):
+        filtered_pool.append(p)
+    elif lang == "ru" and re.search(r"[а-яё]", p.lower()):
+        filtered_pool.append(p)
+    elif lang == "en" and re.search(r"[a-z]", p.lower()):
+        filtered_pool.append(p)
+
+if not filtered_pool:
+    filtered_pool = pool
+
+response = pick_response(filtered_pool, [], msg)
+
+if not response:
+    response = random.choice(pool)
+
+# 🌍 UA language safety fix
+if lang == "ua" and any(x in response.lower() for x in ["the ", "you ", "this "]):
+    response = "я тебе чую 👀"
+
+# 🔁 anti repeat
+if response == self.last_reply:
             response = random.choice([
                 "ти ще тут? 👀",
                 "ніч дихає музикою 🎧",

@@ -9,107 +9,94 @@ active_dialogs = {}
 DIALOG_TIMEOUT = 180
 
 recent_replies = []
-MAX_RECENT = 12
+MAX_RECENT = 10
+
+last_scene_reply = {}
 
 # =========================
-# 💬 RESPONSES
+# 💬 RESPONSES BY ENERGY
 # =========================
 
 responses = {
     "UA": {
-        "info": [
-            "сьогодні DJ готує новий сет 😏",
-            "в клубі зараз спокійно, але це ненадовго",
-            "є нові треки в ротації"
+        "low": [
+            "тиша сьогодні в клубі",
+            "спокійний вечір",
+            "атмосфера розслаблена"
         ],
-        "smalltalk": [
-            "все нормально 🙂",
-            "ловлю атмосферу",
-            "ніч цікава сьогодні"
+        "normal": [
+            "ніч жива 🙂",
+            "цікава атмосфера",
+            "щось відчувається в повітрі"
         ],
-        "confusion": [
-            "що саме тебе збило з пантелику?",
-            "давай уточнимо",
-            "поясни трохи детальніше"
+        "high": [
+            "давай рух 😏 музика вже грає",
+            "клуб прокидається 🔥",
+            "це вже вечір для танців"
         ],
-        "complaint": [
-            "я не зациклилась 🙂 просто ти не даєш нових даних",
-            "я тут, просто чекаю конкретне питання",
-            "спокійно, все працює нормально"
+        "dj": [
+            "DJ зараз готує сильний сет 😏",
+            "буде різкий підйом музики",
+            "він тестить нові треки"
         ],
-        "repetition": [
-            "ти про одне і те ж питаєш 🙂",
-            "ми вже трохи про це говорили",
-            "давай щось нове"
-        ],
-        "default": [
-            "ніч жива",
-            "атмосфера цікава",
-            "дивний вечір сьогодні"
+        "repetition_block": [
+            "ми це вже трохи обговорювали 🙂",
+            "давай щось нове",
+            "ти повторюєшся трохи"
         ]
     },
     "RU": {
-        "info": [
-            "сегодня DJ готовит новый сет 😏",
-            "в клубе спокойно, но не надолго",
-            "есть новые треки"
+        "low": [
+            "тихо сегодня в клубе",
+            "спокойный вечер",
+            "расслабленная атмосфера"
         ],
-        "smalltalk": [
-            "всё нормально 🙂",
-            "ловлю атмосферу",
-            "интересная ночь"
-        ],
-        "confusion": [
-            "что именно непонятно?",
-            "давай уточним",
-            "объясни подробнее"
-        ],
-        "complaint": [
-            "я не зациклилась 🙂 просто нет новых вопросов",
-            "я тут, жду конкретику",
-            "всё работает нормально"
-        ],
-        "repetition": [
-            "ты повторяешься 🙂",
-            "мы уже это обсуждали",
-            "давай дальше"
-        ],
-        "default": [
-            "ночь живая",
+        "normal": [
+            "ночь живая 🙂",
             "интересная атмосфера",
-            "странный вечер"
+            "что-то в воздухе"
+        ],
+        "high": [
+            "давай движение 😏 музыка уже играет",
+            "клуб оживает 🔥",
+            "это вечер для танцев"
+        ],
+        "dj": [
+            "DJ готовит сильный сет 😏",
+            "будет подъем музыки",
+            "он тестирует новые треки"
+        ],
+        "repetition_block": [
+            "мы это уже обсуждали 🙂",
+            "давай новое",
+            "ты повторяешься"
         ]
     },
     "EN": {
-        "info": [
-            "DJ is preparing a new set 😏",
-            "club is calm but not for long",
-            "new tracks are coming"
+        "low": [
+            "quiet night in the club",
+            "calm atmosphere",
+            "relaxed vibe"
         ],
-        "smalltalk": [
-            "I'm good 🙂",
-            "just vibing",
-            "interesting night"
-        ],
-        "confusion": [
-            "what exactly is unclear?",
-            "let's clarify",
-            "tell me more"
-        ],
-        "complaint": [
-            "I'm not stuck 🙂 you just repeat questions",
-            "I'm here, waiting for real input",
-            "everything is fine"
-        ],
-        "repetition": [
-            "you're repeating yourself 🙂",
-            "we already covered that",
-            "let's move on"
-        ],
-        "default": [
-            "night feels alive",
+        "normal": [
+            "night feels alive 🙂",
             "interesting vibe",
-            "odd night"
+            "something in the air"
+        ],
+        "high": [
+            "let’s move 😏 music is up",
+            "club is waking up 🔥",
+            "this is dance time"
+        ],
+        "dj": [
+            "DJ is preparing a strong set 😏",
+            "music is about to rise",
+            "he is testing new tracks"
+        ],
+        "repetition_block": [
+            "we already covered that 🙂",
+            "let’s go further",
+            "you’re repeating a bit"
         ]
     }
 }
@@ -121,7 +108,7 @@ responses = {
 def detect_lang(msg):
     msg = msg.lower()
 
-    if any(x in msg for x in ["hello", "how are", "what", "why"]):
+    if any(x in msg for x in ["hello", "how", "what", "why"]):
         return "EN"
 
     if any(x in msg for x in ["привет", "как", "что", "почему"]):
@@ -130,58 +117,42 @@ def detect_lang(msg):
     return "UA"
 
 # =========================
-# 🧠 MESSAGE TYPE (КЛЮЧОВЕ НОВЕ)
+# 🔥 SCENE DETECTION
 # =========================
 
-def detect_type(msg):
+def detect_scene(msg):
     msg = msg.lower()
 
-    # complaint
-    if "зацик" in msg or "stuck" in msg or "repeating" in msg:
-        return "complaint"
+    # HIGH ENERGY
+    if any(x in msg for x in ["танц", "dance", "рух", "party", "давай"]):
+        return "high"
 
-    # repetition
-    if "again" in msg or "знову" in msg:
-        return "repetition"
+    # DJ MODE
+    if "dj" in msg or "муз" in msg or "сет" in msg:
+        return "dj"
 
-    # confusion
-    if "не понимаю" in msg or "что происходит" in msg:
-        return "confusion"
+    # LOW
+    if any(x in msg for x in ["тихо", "нема", "тишина"]):
+        return "low"
 
-    # info request
-    if "что нового" in msg or "what's new" in msg or "новости" in msg:
-        return "info"
-
-    # smalltalk
-    if "как дела" in msg or "how are" in msg:
-        return "smalltalk"
-
-    return "default"
+    return "normal"
 
 # =========================
-# 🧠 ANTI LOOP
+# 🧠 ANTI REPEAT SCENE
 # =========================
 
-def safe_pick(lang, ttype):
+def anti_repeat(user, msg_type, reply):
 
-    global recent_replies
+    key = f"{user}:{msg_type}"
 
-    pool = responses[lang].get(ttype, responses[lang]["default"])
+    last = last_scene_reply.get(key)
 
-    available = [x for x in pool if x not in recent_replies]
+    if last == reply:
+        return random.choice(responses["UA"]["repetition_block"])
 
-    if not available:
-        recent_replies = []
-        available = pool
+    last_scene_reply[key] = reply
 
-    choice = random.choice(available)
-
-    recent_replies.append(choice)
-
-    if len(recent_replies) > MAX_RECENT:
-        recent_replies.pop(0)
-
-    return choice
+    return reply
 
 # =========================
 # 🎯 MAIN
@@ -197,7 +168,7 @@ def process_luna_message(user, msg):
     msg_low = msg.lower()
 
     lang = detect_lang(msg_low)
-    ttype = detect_type(msg_low)
+    scene = detect_scene(msg_low)
 
     dialog = active_dialogs.get(user)
 
@@ -207,7 +178,7 @@ def process_luna_message(user, msg):
             dialog = None
 
     # =========================
-    # 🔥 ACTIVE DIALOG
+    # 🔥 ACTIVE MODE
     # =========================
 
     if "luna" in msg_low or "луна" in msg_low or dialog:
@@ -216,22 +187,26 @@ def process_luna_message(user, msg):
             active_dialogs[user] = {
                 "time": now,
                 "lang": lang,
-                "type": ttype
+                "scene": scene
             }
             dialog = active_dialogs[user]
 
         lang = dialog["lang"]
 
         dialog["time"] = now
-        dialog["type"] = ttype
+        dialog["scene"] = scene
 
-        return safe_pick(lang, ttype)
+        pool = responses[lang][scene]
+
+        reply = random.choice(pool)
+
+        return anti_repeat(user, scene, reply)
 
     # =========================
-    # 🤫 RANDOM
+    # 🤫 IDLE REACTION
     # =========================
 
     if random.random() < 0.02:
-        return safe_pick(lang, "default")
+        return random.choice(responses[lang]["normal"])
 
     return ""

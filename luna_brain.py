@@ -24,7 +24,7 @@ last_activity_time = time.time()
 def trigger_stop():
     global stop_until, active_session_user, session_until
 
-    stop_until = time.time() + 600  # 10 хв mute
+    stop_until = time.time() + 600
     active_session_user = None
     session_until = 0
 
@@ -34,14 +34,14 @@ def can_talk():
 
 
 # =========================
-# 🟢 SESSION (LIVE MODE)
+# 🟢 SESSION
 # =========================
 
 def open_session(user):
     global active_session_user, session_until
 
     active_session_user = user
-    session_until = time.time() + 60  # 60 сек активна розмова
+    session_until = time.time() + 60
 
 
 def in_session(user):
@@ -82,12 +82,12 @@ def check_idle():
         if memory and "]" in memory:
             memory = memory.split("]", 1)[1].strip()
 
-        if memory:
+        if memory and 5 < len(memory) < 120:
             return memory
 
         return random.choice([
             "клуб трохи затих… 😌",
-            "ніч спостерігає за танцполом 🌙",
+            "ніч дивиться на танцпол 🌙",
             "хтось ще тут? 👀"
         ])
 
@@ -103,6 +103,7 @@ class LunaBrain:
     def __init__(self):
         self.book = []
         self.last_reply = ""
+        self.last_responses = []  # 🔥 анти-залипання
 
         try:
             with open("luna_book.txt", "r", encoding="utf-8") as f:
@@ -111,7 +112,7 @@ class LunaBrain:
             self.book = []
 
     # =========================
-    # 🌍 LANGUAGE DETECT
+    # 🌍 LANGUAGE
     # =========================
 
     def detect_lang(self, text):
@@ -131,7 +132,7 @@ class LunaBrain:
         return "ua"
 
     # =========================
-    # 💬 REPLY ENGINE
+    # 💬 REPLY
     # =========================
 
     def reply(self, user, msg):
@@ -148,28 +149,25 @@ class LunaBrain:
         if not can_talk():
             return ""
 
-        # 🧠 session tick
         session_tick()
 
-        # 🟢 OPEN SESSION
+        # 🟢 SESSION
         if "луна" in msg_l or "luna" in msg_l:
             open_session(user)
 
-        # 🔵 LIVE MODE RULE
+        # 🔵 LIVE RULE
         if not in_session(user):
-
             if random.random() < 0.03:
                 return random.choice([
                     "я тут… 👀",
                     "ти мене шукаєш? 😌",
                     "клуб слухає 🎧"
                 ])
-
             return ""
 
         update_activity()
 
-        # 🧠 learn
+        # 🧠 learning
         learn_from_chat(user, msg)
 
         # 📚 memory
@@ -177,9 +175,10 @@ class LunaBrain:
         memory = ""
 
         if memory_raw and "]" in memory_raw:
-            parts = memory_raw.split("]", 1)
-            if len(parts) > 1:
-                memory = parts[1].strip()
+            memory = memory_raw.split("]", 1)[1].strip()
+
+        if memory and (len(memory) < 5 or len(memory) > 120):
+            memory = ""
 
         # 📚 book
         book_pick = random.choice(self.book) if self.book else ""
@@ -195,7 +194,7 @@ class LunaBrain:
         if not pool:
             return "я тут 😌"
 
-        # 🌍 LANGUAGE FILTER
+        # 🌍 language
         lang = self.detect_lang(msg)
 
         filtered_pool = []
@@ -213,24 +212,30 @@ class LunaBrain:
         if not filtered_pool:
             filtered_pool = pool
 
-        # 🎲 RESPONSE
+        # 🎲 response
         response = pick_response(filtered_pool, [], msg)
 
         if not response:
             response = random.choice(pool)
 
-        # 🌍 UA safety fix
+        # 🌍 UA safety
         if lang == "ua" and any(x in response.lower() for x in ["the ", "you ", "this "]):
             response = "я тебе чую 👀"
 
-        # 🔁 anti repeat
-        if response == self.last_reply:
+        # 🔥 ANTI LOOP (ПОВНОЦІННИЙ)
+        if response in self.last_responses:
             response = random.choice([
                 "ти ще тут? 👀",
                 "ніч дихає музикою 🎧",
                 "я слухаю тебе 😌",
                 "клуб живе 🔥"
             ])
+
+        # save history
+        self.last_responses.append(response)
+
+        if len(self.last_responses) > 5:
+            self.last_responses.pop(0)
 
         self.last_reply = response
 

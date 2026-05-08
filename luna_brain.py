@@ -18,7 +18,23 @@ last_activity_time = time.time()
 
 
 # =========================
-# 🟢 SESSION CONTROL
+# 🔴 STOP SYSTEM
+# =========================
+
+def trigger_stop():
+    global stop_until, active_session_user, session_until
+
+    stop_until = time.time() + 600  # 10 хв mute
+    active_session_user = None
+    session_until = 0
+
+
+def can_talk():
+    return time.time() >= stop_until
+
+
+# =========================
+# 🟢 SESSION (2 min)
 # =========================
 
 def open_session(user):
@@ -34,26 +50,25 @@ def in_session(user):
     return active_session_user == user and time.time() < session_until
 
 
+def session_timeout():
+    global active_session_user, session_until
+
+    if active_session_user and time.time() > session_until:
+        active_session_user = None
+        session_until = 0
+
+
+# =========================
+# 🟡 ACTIVITY
+# =========================
+
 def update_activity():
     global last_activity_time
     last_activity_time = time.time()
 
 
 # =========================
-# 🔴 STOP SYSTEM
-# =========================
-
-def trigger_stop():
-    global stop_until
-    stop_until = time.time() + 600  # 10 хв
-
-
-def can_talk():
-    return time.time() >= stop_until
-
-
-# =========================
-# 🟡 IDLE MODE (10 min)
+# 🌙 IDLE (10 min)
 # =========================
 
 def check_idle():
@@ -61,36 +76,22 @@ def check_idle():
 
     if time.time() - last_activity_time > 600:
         update_activity()
+
+        memory = get_random_memory()
+
+        if memory and "]" in memory:
+            memory = memory.split("]", 1)[1].strip()
+
+        if memory:
+            return memory
+
         return random.choice([
             "клуб трохи затих… 😌",
-            "музика грає тихіше 🎧",
             "ніч дивиться на танцпол 🌙",
-            "хтось ще тут? 👀",
-            "атмосфера зависла між треками"
+            "хтось ще тут? 👀"
         ])
 
     return None
-
-
-# =========================
-# 🌍 LANGUAGE (no spam EN)
-# =========================
-
-def detect_lang(text):
-    text = text.lower()
-
-    ua = len(re.findall(r"[іїєґ]", text))
-    ru = len(re.findall(r"[ыэъё]", text))
-    en = len(re.findall(r"[a-z]", text))
-
-    if ua > 0:
-        return "ua"
-    if ru > ua and ru > 0:
-        return "ru"
-    if en > 5:
-        return "en"
-
-    return "ua"
 
 
 # =========================
@@ -115,7 +116,7 @@ class LunaBrain:
 
     def reply(self, user, msg):
 
-        global stop_until, last_activity_time
+        global stop_until
 
         msg_l = msg.lower()
 
@@ -127,43 +128,47 @@ class LunaBrain:
         if not can_talk():
             return ""
 
-        # 🟢 SESSION OPEN
-        trigger_words = ["луна", "luna", "hey luna", "эй луна"]
+        # 🧠 session timeout reset
+        session_timeout()
 
-        if any(w in msg_l for w in trigger_words):
+        # 🎧 CLUB TRIGGER
+        if "dnipro" in msg_l or "club" in msg_l:
+            return random.choice([
+                "☆ Club DNIPRO живе в ритмі 🎧",
+                "DJ тримає атмосферу 🔥",
+                "ніч у клубі дихає музикою 🌙",
+                "танцпол не зупиняється 💃"
+            ])
+
+        # 🟢 OPEN SESSION
+        if msg_l.strip() in ["луна", "luna", "hey luna", "эй луна"]:
             open_session(user)
 
         # 🔵 session rule
         if not in_session(user):
-
-            # трохи “життя” без спаму
-            if random.random() < 0.05:
+            if random.random() < 0.02:
                 return random.choice([
                     "я тут… 👀",
-                    "клуб слухає 🎧",
                     "ти мене покликав? 😌"
                 ])
-
             return ""
 
         update_activity()
 
-        # 🧠 learn
+        # 🧠 LEARN
         learn_from_chat(user, msg)
 
-        # 📚 memory
+        # 📚 MEMORY
         memory_raw = get_random_memory()
         memory = ""
 
         if memory_raw and "]" in memory_raw:
-            memory = memory_raw.split("]", 1)[1].strip()
+            parts = memory_raw.split("]", 1)
+            if len(parts) > 1:
+                memory = parts[1].strip()
 
-        # 📚 book
+        # 📚 BOOK
         book_pick = random.choice(self.book) if self.book else ""
-
-        # =========================
-        # MIX
-        # =========================
 
         pool = []
 
@@ -181,7 +186,7 @@ class LunaBrain:
         if not response:
             response = random.choice(pool)
 
-        # 🚫 anti repeat
+        # 🔁 anti repeat
         if response == self.last_reply:
             response = random.choice([
                 "ти ще тут? 👀",
@@ -191,15 +196,6 @@ class LunaBrain:
             ])
 
         self.last_reply = response
-
-        # 🌍 language safety
-        if detect_lang(msg) == "ua":
-            if any(x in response.lower() for x in ["the ", "you ", "this "]):
-                response = random.choice([
-                    "цікава атмосфера 😌",
-                    "я тебе чую 👀",
-                    "клуб живе 🔥"
-                ])
 
         return response
 

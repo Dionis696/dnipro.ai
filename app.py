@@ -1,7 +1,7 @@
 from flask import Flask, request, Response
-from luna_brain import handle_message
 import json
-import traceback
+
+from luna_brain import luna
 
 app = Flask(__name__)
 
@@ -11,30 +11,23 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
+
+    data = request.json or {}
+
+    user = data.get("user", "unknown")
+    message = data.get("message", "")
+
     try:
-        data = request.json or {}
-
-        user = data.get("user", "unknown")
-        message = data.get("message", "")
-
-        reply = handle_message(user, message)
-
-        if not reply:
-            reply = ""
-
-        return Response(
-            json.dumps({"reply": reply}, ensure_ascii=False),
-            content_type="application/json"
-        )
-
+        reply = luna.reply(user, message)
     except Exception as e:
-        print("🔥 ERROR:", str(e))
-        traceback.print_exc()
+        print("Luna ERROR:", e)
+        reply = ""
 
-        return Response(
-            json.dumps({"reply": ""}, ensure_ascii=False),
-            content_type="application/json"
-        )
+    return Response(
+        json.dumps({"reply": reply}, ensure_ascii=False),
+        content_type="application/json; charset=utf-8"
+    )
 
 if __name__ == "__main__":
+    print("🔥 Luna ONLINE")
     app.run(host="0.0.0.0", port=10000)

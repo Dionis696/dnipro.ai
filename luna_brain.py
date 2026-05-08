@@ -22,11 +22,10 @@ class LunaBrain:
         if not msg:
             return "..."
 
-        # 🧠 LEARN ALWAYS
+        # 🧠 LEARN
         learn_from_chat(user, msg)
 
         memory = get_random_memory()
-
         book_pick = random.choice(self.book) if self.book else ""
 
         response = pick_response(
@@ -35,11 +34,10 @@ class LunaBrain:
             msg
         )
 
-        # 🔥 ANTI ECHO FIX (КРИТИЧНО)
-        if response.strip() == msg.strip():
+        # 🚨 ANTI ECHO FINAL SHIELD
+        if response.strip().lower() == msg.strip().lower():
             response = random.choice(self.book) if self.book else "я тут 😌"
 
-        # fallback
         if not response:
             response = "я тут 😌"
 

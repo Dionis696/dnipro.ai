@@ -1,8 +1,25 @@
 import time
 import re
 import random
+import os
+
+# =========================
+# 📦 FILE PATH
+# =========================
 
 MEM_FILE = "luna_memory.txt"
+
+# =========================
+# 🔥 AUTO CREATE FILE (ВАЖЛИВО)
+# =========================
+
+def init_memory_file():
+    if not os.path.exists(MEM_FILE):
+        with open(MEM_FILE, "w", encoding="utf-8") as f:
+            f.write("")
+        print("✅ luna_memory.txt created")
+
+init_memory_file()
 
 # =========================
 # 📦 MEMORY STORAGE
@@ -20,13 +37,14 @@ def load_memory():
     try:
         with open(MEM_FILE, "r", encoding="utf-8") as f:
             phrase_memory = [line.strip() for line in f if line.strip()]
-    except:
+    except Exception as e:
+        print("LOAD ERROR:", e)
         phrase_memory = []
 
 load_memory()
 
 # =========================
-# 🚫 FILTER (важливо)
+# 🚫 FILTER
 # =========================
 
 def is_good_phrase(text):
@@ -38,20 +56,17 @@ def is_good_phrase(text):
     if len(text) > 150:
         return False
 
-    # занадто прості фрази
     if re.fullmatch(r"[a-zA-Zа-яА-ЯёЁ\s]+", text) and len(text.split()) < 3:
         return False
 
-    # сміттєві символи
     bad_ratio = len(re.findall(r"[^\w\sа-яА-ЯёЁ]", text)) / max(len(text), 1)
     if bad_ratio > 0.35:
         return False
 
     return True
 
-
 # =========================
-# 💾 SAVE TO FILE
+# 💾 SAVE MEMORY
 # =========================
 
 def save_phrase(user, text):
@@ -60,19 +75,16 @@ def save_phrase(user, text):
 
     entry = f"[{user}] {text}"
 
-    # не дублюємо
     if entry in phrase_memory:
         return
 
     phrase_memory.append(entry)
 
-    # обмеження пам’яті (щоб не зламати сервер)
     if len(phrase_memory) > 2000:
         phrase_memory.pop(0)
 
     with open(MEM_FILE, "a", encoding="utf-8") as f:
         f.write(entry + "\n")
-
 
 # =========================
 # 🧠 USER MEMORY
@@ -88,32 +100,25 @@ def remember_user(user):
     user_memory[user]["count"] += 1
     user_memory[user]["last_seen"] = time.time()
 
-
 # =========================
-# 📥 MAIN INPUT HOOK
+# 📥 MAIN HOOK
 # =========================
 
 def learn_from_chat(user, message):
     remember_user(user)
-
-    # зберігаємо тільки “живі” фрази
     save_phrase(user, message)
 
-
 # =========================
-# 🎯 GET LEARNED PHRASE
+# 🎯 RANDOM MEMORY
 # =========================
 
 def get_random_memory():
     if not phrase_memory:
         return ""
-
-    # беремо випадкову фразу
     return random.choice(phrase_memory)
 
-
 # =========================
-# 🎭 GET USER STYLE (простий аналіз)
+# 🎭 USER STYLE
 # =========================
 
 def get_user_style(user):

@@ -1,45 +1,83 @@
 import random
 import time
 
-book = []
+# =========================
+# 📚 ФРАЗИ
+# =========================
 
-def load_book():
-    global book
-    try:
-        with open("luna_book_big.txt", "r", encoding="utf-8") as f:
-            book = [x.strip() for x in f if x.strip()]
-    except:
-        book = ["я тут 🙂"]
+hello_ua = [
+    "привіт 🙂",
+    "рада тебе бачити",
+    "хей 😉",
+    "привіт, як настрій?",
+]
 
-load_book()
+hello_ru = [
+    "привет 🙂",
+    "рада тебя видеть",
+    "хей 😉",
+]
+
+hello_en = [
+    "hey 🙂",
+    "nice to see you",
+    "hello 😉",
+]
+
+how_ua = [
+    "та нормально 🙂",
+    "ловлю вайб у клубі",
+    "все ок 😉",
+]
+
+how_ru = [
+    "всё нормально 🙂",
+    "кайфую от атмосферы",
+]
+
+how_en = [
+    "I'm good 🙂",
+    "just vibing here",
+]
+
+fun_lines = [
+    "в клубі сьогодні дивна тиша",
+    "DJ явно щось задумав 😏",
+    "музика сьогодні качає",
+    "де всі поділись?",
+]
+
+# =========================
+# 🧠 ПАМ'ЯТЬ
+# =========================
 
 last_time = 0
 COOLDOWN = 2
 
-mode = "normal"
-last_activity = time.time()
+# =========================
+# 🌍 МОВА
+# =========================
 
+def detect_lang(msg):
+    msg = msg.lower()
 
-def pick():
-    return random.choice(book) if book else "я тут 🙂"
+    if any(x in msg for x in ["hello", "hi", "why"]):
+        return "EN"
 
+    if any(x in msg for x in ["привет", "как", "дела"]):
+        return "RU"
 
-def idle():
-    return random.choice([
-        "в клубі тихо сьогодні",
-        "де всі поділись?",
-        "DJ мовчить…",
-        "давайте рух",
-        "дивна тиша"
-    ])
+    return "UA"
 
+# =========================
+# 💬 ЛОГІКА
+# =========================
 
 def process_luna_message(user, msg):
-    global last_time, mode, last_activity
+    global last_time
 
     now = time.time()
 
-    # ❗ анти-спам
     if now - last_time < COOLDOWN:
         return ""
 
@@ -47,28 +85,60 @@ def process_luna_message(user, msg):
         return ""
 
     msg_low = msg.lower()
-    last_activity = now
 
-    # режим
-    if now - last_activity > 600:
-        mode = "idle"
+    lang = detect_lang(msg_low)
 
-    # 🔥 тригери
-    trigger = (
-        "luna" in msg_low or
-        "луна" in msg_low or
-        "привіт" in msg_low or
-        "тиша" in msg_low
-    )
+    # =========================
+    # 👋 ПРИВІТАННЯ
+    # =========================
 
-    # 💬 реакція
-    if trigger:
+    if "прив" in msg_low or "hello" in msg_low or "hi" in msg_low:
+
         last_time = now
-        return pick()
 
-    # 🔥 idle інколи говорить сама
-    if mode == "idle" and random.random() < 0.15:
+        if lang == "RU":
+            return random.choice(hello_ru)
+
+        if lang == "EN":
+            return random.choice(hello_en)
+
+        return random.choice(hello_ua)
+
+    # =========================
+    # ❓ ЯК СПРАВИ
+    # =========================
+
+    if (
+        "як справ" in msg_low or
+        "как дела" in msg_low or
+        "how are" in msg_low
+    ):
+
         last_time = now
-        return idle()
+
+        if lang == "RU":
+            return random.choice(how_ru)
+
+        if lang == "EN":
+            return random.choice(how_en)
+
+        return random.choice(how_ua)
+
+    # =========================
+    # 🌙 ЗГАДАЛИ LUNA
+    # =========================
+
+    if "luna" in msg_low or "луна" in msg_low:
+
+        last_time = now
+        return random.choice(fun_lines)
+
+    # =========================
+    # 🎲 ІНКОЛИ РЕАКЦІЯ
+    # =========================
+
+    if random.random() < 0.05:
+        last_time = now
+        return random.choice(fun_lines)
 
     return ""

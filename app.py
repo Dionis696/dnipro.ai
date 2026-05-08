@@ -1,59 +1,40 @@
 from flask import Flask, request, Response
-import json
-import time
-
 from luna_brain import handle_message
+import json
+import traceback
 
 app = Flask(__name__)
-
-# =========================
-# 🌙 HOME
-# =========================
 
 @app.route("/")
 def home():
     return "Luna ONLINE"
 
-
-# =========================
-# 💬 CHAT ENDPOINT
-# =========================
-
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.json or {}
+    try:
+        data = request.json or {}
 
-    user = data.get("user", "unknown")
-    message = data.get("message", "")
+        user = data.get("user", "unknown")
+        message = data.get("message", "")
 
-    # 🧠 normal response
-    reply = handle_message(user, message)
+        reply = handle_message(user, message)
 
-    # 🟡 idle check (якщо тиша — може щось сказати)
-    idle_reply = check_idle()
+        if not reply:
+            reply = ""
 
-    # якщо idle щось згенерував — він має пріоритет тільки коли reply пустий
-    if idle_reply and not reply:
-        reply = idle_reply
+        return Response(
+            json.dumps({"reply": reply}, ensure_ascii=False),
+            content_type="application/json"
+        )
 
-    if reply is None:
-        reply = ""
+    except Exception as e:
+        print("🔥 ERROR:", str(e))
+        traceback.print_exc()
 
-    # 🔥 JSON safe response
-    response_data = json.dumps(
-        {"reply": reply},
-        ensure_ascii=False
-    )
-
-    return Response(
-        response_data,
-        content_type="application/json; charset=utf-8"
-    )
-
-
-# =========================
-# 🚀 RUN SERVER
-# =========================
+        return Response(
+            json.dumps({"reply": ""}, ensure_ascii=False),
+            content_type="application/json"
+        )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

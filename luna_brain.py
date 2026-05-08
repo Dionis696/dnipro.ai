@@ -41,7 +41,7 @@ def open_session(user):
     global active_session_user, session_until
 
     active_session_user = user
-    session_until = time.time() + 60  # 🔥 60 сек активної взаємодії
+    session_until = time.time() + 60  # 60 сек активна розмова
 
 
 def in_session(user):
@@ -53,7 +53,6 @@ def in_session(user):
 def session_tick():
     global active_session_user, session_until
 
-    # авто-закриття сесії
     if active_session_user and time.time() > session_until:
         active_session_user = None
         session_until = 0
@@ -69,7 +68,7 @@ def update_activity():
 
 
 # =========================
-# 🌙 IDLE (10 min)
+# 🌙 IDLE (10 MIN)
 # =========================
 
 def check_idle():
@@ -112,6 +111,26 @@ class LunaBrain:
             self.book = []
 
     # =========================
+    # 🌍 LANGUAGE DETECT
+    # =========================
+
+    def detect_lang(self, text):
+        text = text.lower()
+
+        ua = len(re.findall(r"[іїєґ]", text))
+        ru = len(re.findall(r"[ыэъё]", text))
+        en = len(re.findall(r"[a-z]", text))
+
+        if ua > 0:
+            return "ua"
+        if ru > ua and ru > 0:
+            return "ru"
+        if en > 5:
+            return "en"
+
+        return "ua"
+
+    # =========================
     # 💬 REPLY ENGINE
     # =========================
 
@@ -129,17 +148,16 @@ class LunaBrain:
         if not can_talk():
             return ""
 
-        # 🧠 session update
+        # 🧠 session tick
         session_tick()
 
-        # 🟢 OPEN SESSION (будь-яке звернення)
+        # 🟢 OPEN SESSION
         if "луна" in msg_l or "luna" in msg_l:
             open_session(user)
 
         # 🔵 LIVE MODE RULE
         if not in_session(user):
 
-            # 🔥 Luna не зникає повністю
             if random.random() < 0.03:
                 return random.choice([
                     "я тут… 👀",
@@ -175,34 +193,38 @@ class LunaBrain:
             pool.append(book_pick)
 
         if not pool:
-    return "я тут 😌"
+            return "я тут 😌"
 
-lang = detect_lang(msg)
+        # 🌍 LANGUAGE FILTER
+        lang = self.detect_lang(msg)
 
-filtered_pool = []
+        filtered_pool = []
 
-for p in pool:
-    if lang == "ua" and re.search(r"[а-яіїєґ]", p.lower()):
-        filtered_pool.append(p)
-    elif lang == "ru" and re.search(r"[а-яё]", p.lower()):
-        filtered_pool.append(p)
-    elif lang == "en" and re.search(r"[a-z]", p.lower()):
-        filtered_pool.append(p)
+        for p in pool:
+            p_low = p.lower()
 
-if not filtered_pool:
-    filtered_pool = pool
+            if lang == "ua" and re.search(r"[а-яіїєґ]", p_low):
+                filtered_pool.append(p)
+            elif lang == "ru" and re.search(r"[а-яё]", p_low):
+                filtered_pool.append(p)
+            elif lang == "en" and re.search(r"[a-z]", p_low):
+                filtered_pool.append(p)
 
-response = pick_response(filtered_pool, [], msg)
+        if not filtered_pool:
+            filtered_pool = pool
 
-if not response:
-    response = random.choice(pool)
+        # 🎲 RESPONSE
+        response = pick_response(filtered_pool, [], msg)
 
-# 🌍 UA language safety fix
-if lang == "ua" and any(x in response.lower() for x in ["the ", "you ", "this "]):
-    response = "я тебе чую 👀"
+        if not response:
+            response = random.choice(pool)
 
-# 🔁 anti repeat
-if response == self.last_reply:
+        # 🌍 UA safety fix
+        if lang == "ua" and any(x in response.lower() for x in ["the ", "you ", "this "]):
+            response = "я тебе чую 👀"
+
+        # 🔁 anti repeat
+        if response == self.last_reply:
             response = random.choice([
                 "ти ще тут? 👀",
                 "ніч дихає музикою 🎧",

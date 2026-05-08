@@ -34,14 +34,14 @@ def can_talk():
 
 
 # =========================
-# 🟢 SESSION (2 min)
+# 🟢 SESSION (LIVE MODE)
 # =========================
 
 def open_session(user):
     global active_session_user, session_until
 
     active_session_user = user
-    session_until = time.time() + 120  # 2 хв
+    session_until = time.time() + 60  # 🔥 60 сек активної взаємодії
 
 
 def in_session(user):
@@ -50,9 +50,10 @@ def in_session(user):
     return active_session_user == user and time.time() < session_until
 
 
-def session_timeout():
+def session_tick():
     global active_session_user, session_until
 
+    # авто-закриття сесії
     if active_session_user and time.time() > session_until:
         active_session_user = None
         session_until = 0
@@ -87,7 +88,7 @@ def check_idle():
 
         return random.choice([
             "клуб трохи затих… 😌",
-            "ніч дивиться на танцпол 🌙",
+            "ніч спостерігає за танцполом 🌙",
             "хтось ще тут? 👀"
         ])
 
@@ -128,37 +129,32 @@ class LunaBrain:
         if not can_talk():
             return ""
 
-        # 🧠 session timeout reset
-        session_timeout()
+        # 🧠 session update
+        session_tick()
 
-        # 🎧 CLUB TRIGGER
-        if "dnipro" in msg_l or "club" in msg_l:
-            return random.choice([
-                "☆ Club DNIPRO живе в ритмі 🎧",
-                "DJ тримає атмосферу 🔥",
-                "ніч у клубі дихає музикою 🌙",
-                "танцпол не зупиняється 💃"
-            ])
-
-        # 🟢 OPEN SESSION
-        if msg_l.strip() in ["луна", "luna", "hey luna", "эй луна"]:
+        # 🟢 OPEN SESSION (будь-яке звернення)
+        if "луна" in msg_l or "luna" in msg_l:
             open_session(user)
 
-        # 🔵 session rule
+        # 🔵 LIVE MODE RULE
         if not in_session(user):
-            if random.random() < 0.02:
+
+            # 🔥 Luna не зникає повністю
+            if random.random() < 0.03:
                 return random.choice([
                     "я тут… 👀",
-                    "ти мене покликав? 😌"
+                    "ти мене шукаєш? 😌",
+                    "клуб слухає 🎧"
                 ])
+
             return ""
 
         update_activity()
 
-        # 🧠 LEARN
+        # 🧠 learn
         learn_from_chat(user, msg)
 
-        # 📚 MEMORY
+        # 📚 memory
         memory_raw = get_random_memory()
         memory = ""
 
@@ -167,7 +163,7 @@ class LunaBrain:
             if len(parts) > 1:
                 memory = parts[1].strip()
 
-        # 📚 BOOK
+        # 📚 book
         book_pick = random.choice(self.book) if self.book else ""
 
         pool = []
@@ -190,9 +186,9 @@ class LunaBrain:
         if response == self.last_reply:
             response = random.choice([
                 "ти ще тут? 👀",
-                "ніч трохи затихла…",
-                "клуб дихає музикою 🎧",
-                "я слухаю тебе 😌"
+                "ніч дихає музикою 🎧",
+                "я слухаю тебе 😌",
+                "клуб живе 🔥"
             ])
 
         self.last_reply = response

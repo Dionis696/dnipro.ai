@@ -2,7 +2,7 @@ from flask import Flask, request, Response
 import json
 import time
 
-from luna_brain import handle_message, check_idle
+from luna_brain import handle_message
 
 app = Flask(__name__)
 

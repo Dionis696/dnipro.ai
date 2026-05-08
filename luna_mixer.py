@@ -2,18 +2,28 @@ import random
 
 def pick_response(book, memory, msg):
 
-    book = book or []
-    memory = memory or []
+    # cleanup
+    book = [x for x in book if x and x.strip()]
+    memory = [x for x in memory if x and x.strip()]
 
-    b = random.choice(book) if book else ""
-    m = random.choice(memory) if memory else ""
+    # priority to book
+    choices = []
 
-    # 🔥 QUESTION MODE
-    if "?" in msg:
-        return m if m else b
+    # 📚 book має більшу вагу
+    for b in book:
+        choices.extend([b, b])
 
-    # 🔥 MIX MODE
-    if random.random() > 0.5:
-        return b
-    else:
-        return m
+    # 🧠 memory меншу
+    for m in memory:
+        choices.append(m)
+
+    if not choices:
+        return ""
+
+    response = random.choice(choices)
+
+    # 🚫 no raw user mirror
+    if response.strip().lower() == msg.strip().lower():
+        return ""
+
+    return response

@@ -1,32 +1,50 @@
-from flask import Flask, request, jsonify
-from luna_brain import handle_message
+from flask import Flask, request, Response
+import json
+
+from luna_brain import luna  # 🔥 беремо новий brain instance
 
 app = Flask(__name__)
 
+# =========================
+# 🌐 HOME
+# =========================
+
+@app.route("/")
+def home():
+    return "Luna ONLINE"
 
 # =========================
-# 🧠 CHAT ENDPOINT
+# 💬 CHAT (FIXED)
 # =========================
 
 @app.route("/chat", methods=["POST"])
 def chat():
 
-    data = request.json
+    data = request.json or {}
 
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
-    response = handle_message(user, message)
+    # 🔥 ВАЖЛИВО: використовуємо новий brain правильно
+    reply = luna.reply(user, message)
 
-    return jsonify({
-        "response": response
-    })
+    if not reply:
+        reply = ""
 
+    response_data = json.dumps(
+        {"reply": reply},
+        ensure_ascii=False
+    )
+
+    return Response(
+        response_data,
+        content_type="application/json; charset=utf-8"
+    )
 
 # =========================
-# 🚀 RUN SERVER
+# 🚀 RUN
 # =========================
 
 if __name__ == "__main__":
-    print("🔥 Luna system started")
-    app.run(host="0.0.0.0", port=5000)
+    print("🔥 Luna ONLINE")
+    app.run(host="0.0.0.0", port=10000)

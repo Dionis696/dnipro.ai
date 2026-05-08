@@ -2,14 +2,14 @@ import os
 import random
 
 # =========================
-# 📁 FILE PATH (FIXED)
+# 📁 FILE PATH
 # =========================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MEM_FILE = os.path.join(BASE_DIR, "luna_memory.txt")
 
 # =========================
-# 📦 INIT FILE
+# 📦 CREATE FILE IF NOT EXISTS
 # =========================
 
 if not os.path.exists(MEM_FILE):
@@ -28,29 +28,40 @@ phrase_memory = []
 
 def load_memory():
     global phrase_memory
+
     try:
         with open(MEM_FILE, "r", encoding="utf-8") as f:
-            phrase_memory = [line.strip() for line in f if line.strip()]
+            phrase_memory = [
+                line.strip()
+                for line in f
+                if line.strip()
+            ]
     except:
         phrase_memory = []
 
 load_memory()
 
 # =========================
-# 🚫 VALIDATION FILTER
+# 🚫 VALIDATION
 # =========================
 
 def is_valid(text):
+
     if not text:
         return False
-    if len(text.strip()) < 3:
+
+    text = text.strip()
+
+    if len(text) < 3:
         return False
+
     if len(text) > 250:
         return False
+
     return True
 
 # =========================
-# 💾 SAVE MEMORY (FIXED)
+# 💾 SAVE PHRASE
 # =========================
 
 def save_phrase(user, text):
@@ -58,36 +69,41 @@ def save_phrase(user, text):
     if not is_valid(text):
         return
 
+    # 🚫 Luna НЕ вчиться сама на собі
+    if user.lower() == "luna":
+        return
+
+    # 🚫 не зберігати системні штуки
+    if text.startswith("["):
+        return
+
     entry = f"[{user}] {text}"
 
-    # ❌ no duplicates
+    # 🚫 no duplicates
     if entry in phrase_memory:
         return
 
     phrase_memory.append(entry)
 
-    # limit memory size
+    # 🚫 limit
     if len(phrase_memory) > 2000:
         phrase_memory.pop(0)
 
-    # 💾 write to file (FORCED)
+    # 💾 SAVE TO FILE
     try:
         with open(MEM_FILE, "a", encoding="utf-8") as f:
             f.write(entry + "\n")
             f.flush()
             os.fsync(f.fileno())
+
     except Exception as e:
-        print("MEMORY WRITE ERROR:", e)
+        print("MEMORY ERROR:", e)
 
 # =========================
 # 🧠 LEARN FROM CHAT
 # =========================
 
 def learn_from_chat(user, message):
-
-    # 🚨 DO NOT LEARN FROM LUNA ITSELF
-    if user.lower() == "luna":
-        return
 
     save_phrase(user, message)
 
@@ -96,12 +112,31 @@ def learn_from_chat(user, message):
 # =========================
 
 def get_random_memory():
+
     if not phrase_memory:
         return ""
-    return random.choice(phrase_memory)
+
+    # 🚫 беремо тільки людські фрази
+    clean = []
+
+    for x in phrase_memory:
+
+        # remove [USER]
+        if "]" in x:
+            text = x.split("]", 1)[1].strip()
+        else:
+            text = x.strip()
+
+        if text:
+            clean.append(text)
+
+    if not clean:
+        return ""
+
+    return random.choice(clean)
 
 # =========================
-# 📊 DEBUG HELP (optional)
+# 📊 DEBUG
 # =========================
 
 def memory_size():

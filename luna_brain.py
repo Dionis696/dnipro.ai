@@ -7,7 +7,7 @@ from luna_mixer import pick_response
 
 
 # =========================
-# 🧠 CONTEXT MEMORY (2–3 MIN)
+# 🧠 CONTEXT MEMORY
 # =========================
 
 context_buffer = []
@@ -19,7 +19,6 @@ def update_context(user, msg):
     context_buffer.append(f"{user}: {msg}")
     last_activity_time = time.time()
 
-    # keep only last ~10 messages
     if len(context_buffer) > 10:
         context_buffer.pop(0)
 
@@ -36,7 +35,7 @@ def check_stop(msg):
     text = msg.lower()
 
     if "stop" in text or "луна стоп" in text:
-        stop_until = time.time() + 600  # 10 min
+        stop_until = time.time() + 600  # 10 min mute
         return True
 
     return False
@@ -68,17 +67,24 @@ def detect_language(text):
 
 
 # =========================
-# 🧠 IDLE MODE
+# 🟡 IDLE MODE (CLEAN 10 MIN)
 # =========================
 
-def idle_message():
-    return random.choice([
-        "клуб сьогодні трохи тихий 😌",
-        "музика ще звучить навіть у тиші 🎧",
-        "тиша теж має свій ритм…",
-        "ніч спостерігає за нами 🌙",
-        "цікава атмосфера сьогодні…"
-    ])
+def check_idle():
+    global last_activity_time
+
+    if time.time() - last_activity_time > 600:  # 10 min silence
+        last_activity_time = time.time()
+
+        return random.choice([
+            "клуб трохи затих… 😌",
+            "музика ще грає, але розмови зникли 🎧",
+            "тиша сьогодні особлива…",
+            "ніч дивиться на танцпол 🌙",
+            "хтось ще тут? 👀"
+        ])
+
+    return None
 
 
 # =========================
@@ -110,27 +116,23 @@ class LunaBrain:
             return "окей… мовчу 😌"
 
         if is_stopped():
-            return ""  # full mute
+            return ""
 
-        # 🧠 CONTEXT UPDATE
+        # 🧠 CONTEXT
         update_context(user, msg)
 
         # 🧠 LEARN
         learn_from_chat(user, msg)
 
-        lang = detect_language(msg)
-
-        # 📚 BOOK PICK
+        # 📚 BOOK
         book_pick = random.choice(self.book) if self.book else ""
 
-        # 🧠 MEMORY PICK
+        # 🧠 MEMORY
         memory = get_random_memory()
 
-        # clean memory
         if "]" in memory:
             memory = memory.split("]", 1)[1].strip()
 
-        # 🚫 anti echo
         if memory.lower() == msg.lower():
             memory = ""
 
@@ -160,20 +162,6 @@ class LunaBrain:
 
 
 # =========================
-# 🟡 IDLE CHECK (CALL THIS OUTSIDE)
-# =========================
-
-def check_idle():
-    global last_activity_time
-
-    if time.time() - last_activity_time > 120:  # 2 min idle
-        last_activity_time = time.time()
-        return idle_message()
-
-    return None
-
-
-# =========================
 # 🚀 INSTANCE
 # =========================
 
@@ -182,3 +170,11 @@ luna = LunaBrain()
 
 def handle_message(user, message):
     return luna.reply(user, message)
+
+
+# =========================
+# 🟡 EXTERNAL IDLE CALL
+# =========================
+
+def get_idle_message():
+    return check_idle()

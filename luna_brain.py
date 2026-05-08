@@ -17,31 +17,100 @@ MAX_RECENT = 12
 
 responses = {
     "UA": {
-        "greeting": ["привіт 🙂", "рада тебе бачити", "хей 😉"],
-        "question": ["так, слухаю тебе", "розкажи детальніше", "я тут, кажи"],
-        "confusion": ["розумію що це плутає", "давай поясню", "що саме не ясно?"],
-        "accusation": ["я нікого не виганяла 😌", "ти, мабуть, щось не так зрозумів", "спокійно, все нормально"],
-        "curiosity": ["цікаве питання 😏", "і що ти думаєш сам?", "давай розберемо"],
-        "dj": ["DJ ще тут, все під контролем 😏", "він готує сет", "нічого не зникало"],
-        "default": ["я тут 🙂", "слухаю тебе", "продовжуй"]
+        "info": [
+            "сьогодні DJ готує новий сет 😏",
+            "в клубі зараз спокійно, але це ненадовго",
+            "є нові треки в ротації"
+        ],
+        "smalltalk": [
+            "все нормально 🙂",
+            "ловлю атмосферу",
+            "ніч цікава сьогодні"
+        ],
+        "confusion": [
+            "що саме тебе збило з пантелику?",
+            "давай уточнимо",
+            "поясни трохи детальніше"
+        ],
+        "complaint": [
+            "я не зациклилась 🙂 просто ти не даєш нових даних",
+            "я тут, просто чекаю конкретне питання",
+            "спокійно, все працює нормально"
+        ],
+        "repetition": [
+            "ти про одне і те ж питаєш 🙂",
+            "ми вже трохи про це говорили",
+            "давай щось нове"
+        ],
+        "default": [
+            "ніч жива",
+            "атмосфера цікава",
+            "дивний вечір сьогодні"
+        ]
     },
     "RU": {
-        "greeting": ["привет 🙂", "рада тебя видеть", "хей 😉"],
-        "question": ["да, слушаю тебя", "расскажи подробнее", "я тут, говори"],
-        "confusion": ["понимаю что это путает", "давай объясню", "что именно непонятно?"],
-        "accusation": ["я никого не выгоняла 😌", "ты, возможно, неправильно понял", "всё нормально"],
-        "curiosity": ["интересный вопрос 😏", "а ты как думаешь?", "давай разберём"],
-        "dj": ["DJ на месте 😏", "он готовит сет", "всё под контролем"],
-        "default": ["я тут 🙂", "слушаю тебя", "продолжай"]
+        "info": [
+            "сегодня DJ готовит новый сет 😏",
+            "в клубе спокойно, но не надолго",
+            "есть новые треки"
+        ],
+        "smalltalk": [
+            "всё нормально 🙂",
+            "ловлю атмосферу",
+            "интересная ночь"
+        ],
+        "confusion": [
+            "что именно непонятно?",
+            "давай уточним",
+            "объясни подробнее"
+        ],
+        "complaint": [
+            "я не зациклилась 🙂 просто нет новых вопросов",
+            "я тут, жду конкретику",
+            "всё работает нормально"
+        ],
+        "repetition": [
+            "ты повторяешься 🙂",
+            "мы уже это обсуждали",
+            "давай дальше"
+        ],
+        "default": [
+            "ночь живая",
+            "интересная атмосфера",
+            "странный вечер"
+        ]
     },
     "EN": {
-        "greeting": ["hey 🙂", "nice to see you", "hello 😉"],
-        "question": ["yes, I'm listening", "tell me more", "I'm here, go on"],
-        "confusion": ["I get that it's confusing", "let me clarify", "what exactly is unclear?"],
-        "accusation": ["I didn’t remove anyone 😌", "you might be mistaken", "everything is fine"],
-        "curiosity": ["interesting question 😏", "what do you think?", "let's explore it"],
-        "dj": ["DJ is still here 😏", "he is preparing a set", "nothing is wrong"],
-        "default": ["I'm here 🙂", "listening", "go on"]
+        "info": [
+            "DJ is preparing a new set 😏",
+            "club is calm but not for long",
+            "new tracks are coming"
+        ],
+        "smalltalk": [
+            "I'm good 🙂",
+            "just vibing",
+            "interesting night"
+        ],
+        "confusion": [
+            "what exactly is unclear?",
+            "let's clarify",
+            "tell me more"
+        ],
+        "complaint": [
+            "I'm not stuck 🙂 you just repeat questions",
+            "I'm here, waiting for real input",
+            "everything is fine"
+        ],
+        "repetition": [
+            "you're repeating yourself 🙂",
+            "we already covered that",
+            "let's move on"
+        ],
+        "default": [
+            "night feels alive",
+            "interesting vibe",
+            "odd night"
+        ]
     }
 }
 
@@ -52,52 +121,52 @@ responses = {
 def detect_lang(msg):
     msg = msg.lower()
 
-    if any(x in msg for x in ["hello", "how are", "why", "what"]):
+    if any(x in msg for x in ["hello", "how are", "what", "why"]):
         return "EN"
 
-    if any(x in msg for x in ["привет", "как", "почему", "что"]):
+    if any(x in msg for x in ["привет", "как", "что", "почему"]):
         return "RU"
 
     return "UA"
 
 # =========================
-# 🧠 INTENT + EMOTION
+# 🧠 MESSAGE TYPE (КЛЮЧОВЕ НОВЕ)
 # =========================
 
-def detect_emotion(msg):
+def detect_type(msg):
     msg = msg.lower()
 
-    # accusation / blame
-    if "выгнал" in msg or "removed" in msg or "why did you" in msg:
-        return "accusation"
+    # complaint
+    if "зацик" in msg or "stuck" in msg or "repeating" in msg:
+        return "complaint"
+
+    # repetition
+    if "again" in msg or "знову" in msg:
+        return "repetition"
 
     # confusion
-    if "не понимаю" in msg or "don’t understand" in msg or "что" in msg:
+    if "не понимаю" in msg or "что происходит" in msg:
         return "confusion"
 
-    # curiosity
-    if "зачем" in msg or "why" in msg or "что дальше" in msg:
-        return "curiosity"
+    # info request
+    if "что нового" in msg or "what's new" in msg or "новости" in msg:
+        return "info"
 
-    # question
-    if "?" in msg:
-        return "question"
-
-    # dj topic
-    if "dj" in msg or "муз" in msg:
-        return "dj"
+    # smalltalk
+    if "как дела" in msg or "how are" in msg:
+        return "smalltalk"
 
     return "default"
 
 # =========================
-# 🧠 ANTI REPEAT
+# 🧠 ANTI LOOP
 # =========================
 
-def safe_pick(lang, emotion):
+def safe_pick(lang, ttype):
 
     global recent_replies
 
-    pool = responses[lang].get(emotion, responses[lang]["default"])
+    pool = responses[lang].get(ttype, responses[lang]["default"])
 
     available = [x for x in pool if x not in recent_replies]
 
@@ -128,7 +197,7 @@ def process_luna_message(user, msg):
     msg_low = msg.lower()
 
     lang = detect_lang(msg_low)
-    emotion = detect_emotion(msg_low)
+    ttype = detect_type(msg_low)
 
     dialog = active_dialogs.get(user)
 
@@ -147,19 +216,19 @@ def process_luna_message(user, msg):
             active_dialogs[user] = {
                 "time": now,
                 "lang": lang,
-                "emotion": emotion
+                "type": ttype
             }
             dialog = active_dialogs[user]
 
         lang = dialog["lang"]
 
         dialog["time"] = now
-        dialog["emotion"] = emotion
+        dialog["type"] = ttype
 
-        return safe_pick(lang, emotion)
+        return safe_pick(lang, ttype)
 
     # =========================
-    # 🤫 RANDOM REACTION
+    # 🤫 RANDOM
     # =========================
 
     if random.random() < 0.02:

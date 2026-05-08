@@ -2,116 +2,81 @@ import random
 import time
 
 # =========================
-# 🌍 ФРАЗИ
+# 🧠 MEMORY
 # =========================
 
-hello_ua = [
-    "привіт 🙂",
-    "рада тебе бачити",
-    "хей 😉",
-    "привіт, як настрій?",
-]
-
-hello_ru = [
-    "привет 🙂",
-    "рада тебя видеть",
-    "хей 😉",
-]
-
-hello_en = [
-    "hey 🙂",
-    "nice to see you",
-    "hello 😉",
-]
-
-how_ua = [
-    "та нормально 🙂",
-    "ловлю вайб у клубі",
-    "все ок 😉",
-    "ніч сьогодні цікава"
-]
-
-how_ru = [
-    "всё нормально 🙂",
-    "атмосфера кайф",
-    "всё ок 😉",
-]
-
-how_en = [
-    "I'm good 🙂",
-    "just vibing here",
-    "all good 😉",
-]
-
-idle_lines = [
-    "в клубі тихо сьогодні",
-    "DJ щось задумав 😏",
-    "дивний вайб сьогодні",
-    "де всі поділись?",
-    "ніч жива"
-]
+active_dialogs = {}
+DIALOG_TIMEOUT = 180  # 3 хв
 
 # =========================
-# 🧠 ПАМʼЯТЬ
+# 💬 RESPONSES
 # =========================
 
-recent_replies = []
+greetings = {
+    "UA": ["привіт 🙂", "рада тебе бачити", "хей 😉"],
+    "RU": ["привет 🙂", "рада тебя видеть", "хей 😉"],
+    "EN": ["hey 🙂", "nice to see you", "hello 😉"]
+}
 
-MAX_RECENT = 10
+how_are_you = {
+    "UA": ["та нормально 🙂", "ловлю вайб", "все ок 😉"],
+    "RU": ["всё нормально 🙂", "ловлю вайб", "всё ок 😉"],
+    "EN": ["I'm good 🙂", "just vibing", "all good 😉"]
+}
 
-last_message_time = 0
-COOLDOWN = 2
+silence = {
+    "UA": ["тиша якась сьогодні 😏", "в клубі затихло", "дивний вайб"],
+    "RU": ["тишина сегодня 😏", "в клубе тихо", "странный вайб"],
+    "EN": ["too quiet here 😏", "club feels calm", "strange vibe"]
+}
 
-# коротка памʼять діалогу
-active_users = {}
+dj_topic = {
+    "UA": ["DJ щось задумав 😏", "зараз буде рух", "відчуваю двіж"],
+    "RU": ["DJ что-то задумал 😏", "сейчас будет движ", "чувствую разрыв"],
+    "EN": ["DJ planning something 😏", "big drop coming", "feeling the vibe"]
+}
 
-DIALOG_MEMORY = 30
+idle_lines = {
+    "UA": ["ніч жива", "атмосфера цікава", "дивний вечір"],
+    "RU": ["ночь живая", "интересная атмосфера", "странный вечер"],
+    "EN": ["night feels alive", "interesting vibe", "odd night"]
+}
 
 # =========================
-# 🌍 МОВА
+# 🌍 LANGUAGE DETECTION
 # =========================
 
 def detect_lang(msg):
-
     msg = msg.lower()
 
-    if any(x in msg for x in [
-        "hello", "hi", "how are", "why"
-    ]):
+    if any(x in msg for x in ["hello", "how are", "why", "what"]):
         return "EN"
 
-    if any(x in msg for x in [
-        "привет", "как дела", "почему"
-    ]):
+    if any(x in msg for x in ["привет", "как", "почему", "что"]):
         return "RU"
 
     return "UA"
 
 # =========================
-# 🧠 SAFE RANDOM
+# 🧠 TOPIC
 # =========================
 
-def safe_random(lines):
+def detect_topic(msg):
+    msg = msg.lower()
 
-    global recent_replies
+    if "dj" in msg or "муз" in msg:
+        return "dj"
 
-    available = [
-        x for x in lines
-        if x not in recent_replies
-    ]
+    if "тиша" in msg or "quiet" in msg:
+        return "silence"
 
-    if not available:
-        recent_replies = []
-        available = lines
+    if "як" in msg or "как" in msg or "how" in msg:
+        return "how"
 
-    choice = random.choice(available)
+    if "прив" in msg or "hello" in msg:
+        return "greeting"
 
-    recent_replies.append(choice)
-
-    if len(recent_replies) > MAX_RECENT:
-        recent_replies.pop(0)
-
-    return choice
+    return "default"
 
 # =========================
 # 🎯 MAIN
@@ -119,99 +84,71 @@ def safe_random(lines):
 
 def process_luna_message(user, msg):
 
-    global last_message_time
-    global active_users
-
     now = time.time()
-
-    # антиспам
-    if now - last_message_time < COOLDOWN:
-        return ""
 
     if not msg:
         return ""
 
     msg_low = msg.lower()
 
-    lang = detect_lang(msg_low)
+    topic = detect_topic(msg_low)
+    detected_lang = detect_lang(msg_low)
 
     # =========================
-    # 🎯 ТРИГЕР
+    # 🧠 ACTIVE DIALOG
     # =========================
 
-    direct_trigger = (
-        "luna" in msg_low or
-        "луна" in msg_low
-    )
+    dialog = active_dialogs.get(user)
 
-    # якщо був діалог
-    remembered = False
-
-    if user in active_users:
-        if now - active_users[user] < DIALOG_MEMORY:
-            remembered = True
+    if dialog:
+        if now - dialog["time"] > DIALOG_TIMEOUT:
+            active_dialogs.pop(user)
+            dialog = None
 
     # =========================
-    # 👋 ПРИВІТ
+    # 🔥 START OR CONTINUE DIALOG
     # =========================
 
-    if (
-        "прив" in msg_low or
-        "hello" in msg_low or
-        "hi" in msg_low
-    ) and (direct_trigger or remembered):
+    if "luna" in msg_low or "луна" in msg_low or dialog:
 
-        active_users[user] = now
-        last_message_time = now
+        # якщо новий діалог → фіксуємо мову
+        if not dialog:
+            active_dialogs[user] = {
+                "time": now,
+                "lang": detected_lang,
+                "topic": topic
+            }
+            dialog = active_dialogs[user]
 
-        if lang == "RU":
-            return safe_random(hello_ru)
+        # якщо вже є → НЕ міняємо мову (LANG LOCK)
+        lang = dialog["lang"]
 
-        if lang == "EN":
-            return safe_random(hello_en)
+        dialog["time"] = now
+        dialog["topic"] = topic
 
-        return safe_random(hello_ua)
+        # =========================
+        # 🎯 RESPONSES BY TOPIC
+        # =========================
 
-    # =========================
-    # ❓ ЯК СПРАВИ
-    # =========================
+        if topic == "dj":
+            return random.choice(dj_topic[lang])
 
-    if (
-        "як" in msg_low or
-        "как" in msg_low or
-        "how" in msg_low
-    ) and (direct_trigger or remembered):
+        if topic == "silence":
+            return random.choice(silence[lang])
 
-        active_users[user] = now
-        last_message_time = now
+        if topic == "greeting":
+            return random.choice(greetings[lang])
 
-        if lang == "RU":
-            return safe_random(how_ru)
+        if topic == "how":
+            return random.choice(how_are_you[lang])
 
-        if lang == "EN":
-            return safe_random(how_en)
-
-        return safe_random(how_ua)
+        return random.choice(idle_lines[lang])
 
     # =========================
-    # 🌙 ПРОСТО ЗГАДАЛИ LUNA
+    # 🤫 RANDOM REACTION
     # =========================
 
-    if direct_trigger:
-
-        active_users[user] = now
-        last_message_time = now
-
-        return safe_random(idle_lines)
-
-    # =========================
-    # 🎲 РІДКІ РЕАКЦІЇ
-    # =========================
-
-    if random.random() < 0.03:
-
-        last_message_time = now
-
-        return safe_random(idle_lines)
+    if random.random() < 0.02:
+        return random.choice(idle_lines["UA"])
 
     return ""

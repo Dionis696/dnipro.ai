@@ -8,7 +8,7 @@ def pick_response(book, memory, msg):
     b = random.choice(book) if book else ""
     m = random.choice(memory) if memory else ""
 
-    # 🔥 PRIORITY LOGIC
+    # 🔥 QUESTION MODE
     if "?" in msg:
         return m if m else b
 

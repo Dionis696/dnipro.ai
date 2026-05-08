@@ -6,7 +6,7 @@ import time
 # =========================
 
 active_dialogs = {}
-DIALOG_TIMEOUT = 180
+DIALOG_TIMEOUT = 180  # 3 хв
 
 recent_replies = []
 MAX_RECENT = 12
@@ -20,27 +20,30 @@ responses = {
         "greeting": ["привіт 🙂", "рада тебе бачити", "хей 😉"],
         "how": ["та нормально 🙂", "ловлю вайб", "все ок 😉"],
         "silence": ["тиша якась сьогодні 😏", "в клубі затихло", "дивний вайб"],
-        "dj": ["DJ щось задумав 😏", "зараз буде рух", "відчуваю двіж"],
-        "confusion": ["щось не так відчувається", "дивний момент", "хмм… цікаво"],
+        "dj": ["DJ щось готує 😏", "відчуваю що буде рух", "він щось задумав"],
+        "confusion": ["хмм… не зовсім ясно", "цікаво сформульовано", "є щось дивне в цьому"],
         "doubt": ["ти сумніваєшся? 😏", "чому так думаєш?", "не все так просто"],
-        "default": ["ніч жива", "атмосфера цікава", "цікавий вечір"]
+        "followup": ["розкажи більше", "і що далі?", "цікаво, продовжуй"],
+        "default": ["ніч жива", "цікавий момент", "атмосфера цікава"]
     },
     "RU": {
         "greeting": ["привет 🙂", "рада тебя видеть", "хей 😉"],
         "how": ["всё нормально 🙂", "ловлю вайб", "всё ок 😉"],
         "silence": ["тишина сегодня 😏", "в клубе тихо", "странный вайб"],
-        "dj": ["DJ что-то задумал 😏", "сейчас будет движ", "чувствую разрыв"],
-        "confusion": ["что-то странно", "интересный момент", "хмм…"],
+        "dj": ["DJ что-то готовит 😏", "чувствую движ", "он что-то задумал"],
+        "confusion": ["хмм… не совсем ясно", "интересно сказано", "что-то странное"],
         "doubt": ["сомневаешься? 😏", "почему так думаешь?", "не всё так просто"],
+        "followup": ["расскажи больше", "и что дальше?", "интересно, продолжай"],
         "default": ["ночь живая", "интересная атмосфера", "странный вечер"]
     },
     "EN": {
         "greeting": ["hey 🙂", "nice to see you", "hello 😉"],
         "how": ["I'm good 🙂", "just vibing", "all good 😉"],
         "silence": ["too quiet here 😏", "club feels calm", "strange vibe"],
-        "dj": ["DJ planning something 😏", "big drop coming", "feeling the vibe"],
-        "confusion": ["something feels off", "interesting moment", "hmm…"],
+        "dj": ["DJ is preparing something 😏", "I feel something big coming", "he is planning something"],
+        "confusion": ["hmm… not sure", "interesting phrasing", "something feels off"],
         "doubt": ["you doubt it? 😏", "why do you think that?", "not that simple"],
+        "followup": ["tell me more", "and then?", "interesting, go on"],
         "default": ["night feels alive", "interesting vibe", "odd night"]
     }
 }
@@ -61,7 +64,7 @@ def detect_lang(msg):
     return "UA"
 
 # =========================
-# 🎯 INTENT (НОВЕ!)
+# 🧠 INTENT
 # =========================
 
 def detect_intent(msg):
@@ -73,13 +76,13 @@ def detect_intent(msg):
     if "тиша" in msg or "quiet" in msg:
         return "silence"
 
-    if "як справ" in msg or "how are" in msg:
+    if "як" in msg or "how" in msg or "как" in msg:
         return "how"
 
     if "прив" in msg or "hello" in msg:
         return "greeting"
 
-    if "ти впевн" in msg or "are you sure" in msg:
+    if "ти впевн" in msg or "sure" in msg:
         return "doubt"
 
     if "що" in msg or "what" in msg:
@@ -88,7 +91,7 @@ def detect_intent(msg):
     return "default"
 
 # =========================
-# 🧠 ANTI LOOP
+# 🧠 SAFE PICK
 # =========================
 
 def safe_pick(lang, intent):
@@ -113,7 +116,7 @@ def safe_pick(lang, intent):
     return choice
 
 # =========================
-# 🧠 MAIN
+# 🎯 MAIN
 # =========================
 
 def process_luna_message(user, msg):
@@ -130,6 +133,10 @@ def process_luna_message(user, msg):
 
     dialog = active_dialogs.get(user)
 
+    # =========================
+    # ⏳ TIMEOUT DIALOG
+    # =========================
+
     if dialog:
         if now - dialog["time"] > DIALOG_TIMEOUT:
             active_dialogs.pop(user)
@@ -141,24 +148,47 @@ def process_luna_message(user, msg):
 
     if "luna" in msg_low or "луна" in msg_low or dialog:
 
+        # новий діалог
         if not dialog:
             active_dialogs[user] = {
                 "time": now,
                 "lang": lang,
-                "intent": intent
+                "topic": intent,
+                "last_q": msg_low
             }
             dialog = active_dialogs[user]
 
-        # update only time + intent (LANG LOCK!)
-        dialog["time"] = now
-        dialog["intent"] = intent
-
+        # 🔒 LANGUAGE LOCK
         lang = dialog["lang"]
+
+        # 🧠 update context
+        last_q = dialog.get("last_q", "")
+
+        # якщо це follow-up (коротке питання)
+        is_followup = len(msg_low.split()) <= 4
+
+        dialog["time"] = now
+        dialog["topic"] = intent
+
+        # зберігаємо питання
+        if "?" in msg_low:
+            dialog["last_q"] = msg_low
+
+        # =========================
+        # 🎯 FOLLOW-UP LOGIC
+        # =========================
+
+        if is_followup and dialog.get("last_q"):
+            return safe_pick(lang, "followup")
+
+        # =========================
+        # 🎯 NORMAL RESPONSE
+        # =========================
 
         return safe_pick(lang, intent)
 
     # =========================
-    # 🤫 RANDOM REACTION
+    # 🤫 RANDOM
     # =========================
 
     if random.random() < 0.02:

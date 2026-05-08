@@ -1,38 +1,32 @@
 import time
 import re
-import random
 import os
 
 MEM_FILE = "luna_memory.txt"
 
 # =========================
-# 🧠 INIT (без створення файлу на сервері GitHub)
+# 🔥 AUTO CREATE FILE
 # =========================
 
-def init_memory():
-    # тільки перевіряємо, не створюємо магічно
-    if not os.path.exists(MEM_FILE):
-        print("⚠️ luna_memory.txt not found in repo")
-
-init_memory()
+if not os.path.exists(MEM_FILE):
+    with open(MEM_FILE, "w", encoding="utf-8") as f:
+        f.write("")
 
 # =========================
-# STORAGE
+# MEMORY
 # =========================
 
-user_memory = {}
 phrase_memory = []
 
 # =========================
-# LOAD MEMORY
+# LOAD
 # =========================
 
 def load_memory():
     global phrase_memory
-
     try:
         with open(MEM_FILE, "r", encoding="utf-8") as f:
-            phrase_memory = [line.strip() for line in f if line.strip()]
+            phrase_memory = [x.strip() for x in f if x.strip()]
     except:
         phrase_memory = []
 
@@ -42,59 +36,56 @@ load_memory()
 # FILTER
 # =========================
 
-def is_good_phrase(text):
-    if len(text) < 10:
+def is_good(text):
+    if len(text) < 6:
         return False
-
-    if len(text) > 150:
+    if len(text) > 200:
         return False
-
-    bad_ratio = len(re.findall(r"[^\w\sа-яА-ЯёЁ]", text)) / max(len(text), 1)
-    if bad_ratio > 0.35:
-        return False
-
     return True
 
 # =========================
-# SAVE
+# SAVE (FIXED)
 # =========================
 
 def save_phrase(user, text):
-    if not is_good_phrase(text):
+
+    if not is_good(text):
         return
 
     entry = f"[{user}] {text}"
 
+    # ❌ no duplicates
     if entry in phrase_memory:
         return
 
     phrase_memory.append(entry)
 
+    # limit
     if len(phrase_memory) > 2000:
         phrase_memory.pop(0)
 
-    # ⚠️ важливо для GitHub/hosting
+    # 💾 WRITE TO FILE (MAIN FIX)
     try:
         with open(MEM_FILE, "a", encoding="utf-8") as f:
             f.write(entry + "\n")
-    except:
-        print("⚠️ Cannot write to file (read-only environment?)")
+    except Exception as e:
+        print("MEMORY WRITE ERROR:", e)
+
 
 # =========================
-# LEARN
+# LEARN ENTRY
 # =========================
 
 def learn_from_chat(user, message):
-    user_memory[user] = user_memory.get(user, {"count": 0})
-    user_memory[user]["count"] += 1
-
     save_phrase(user, message)
 
+
 # =========================
-# MEMORY OUTPUT
+# GET MEMORY
 # =========================
 
 def get_random_memory():
     if not phrase_memory:
         return ""
+    import random
     return random.choice(phrase_memory)

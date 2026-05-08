@@ -7,7 +7,7 @@ from luna_mixer import pick_response
 
 
 # =========================
-# 🧠 CONTEXT MEMORY
+# 🧠 CONTEXT + ACTIVITY
 # =========================
 
 context_buffer = []
@@ -24,29 +24,28 @@ def update_context(user, msg):
 
 
 # =========================
-# 🔴 STOP MODE
+# 🔴 STOP SYSTEM
 # =========================
 
 stop_until = 0
 
 def check_stop(msg):
     global stop_until
-
     text = msg.lower()
 
     if "stop" in text or "луна стоп" in text:
-        stop_until = time.time() + 600  # 10 min mute
+        stop_until = time.time() + 600
         return True
 
     return False
 
 
-def is_stopped():
-    return time.time() < stop_until
+def can_talk():
+    return time.time() >= stop_until
 
 
 # =========================
-# 🌍 LANGUAGE DETECT
+# 🌍 LANGUAGE
 # =========================
 
 def detect_language(text):
@@ -67,21 +66,21 @@ def detect_language(text):
 
 
 # =========================
-# 🟡 IDLE MODE (CLEAN 10 MIN)
+# 🟡 IDLE MODE (10 MIN)
 # =========================
 
 def check_idle():
     global last_activity_time
 
-    if time.time() - last_activity_time > 600:  # 10 min silence
+    if time.time() - last_activity_time > 600:
         last_activity_time = time.time()
 
         return random.choice([
             "клуб трохи затих… 😌",
-            "музика ще грає, але розмови зникли 🎧",
-            "тиша сьогодні особлива…",
+            "музика ще грає, але всі мовчать 🎧",
             "ніч дивиться на танцпол 🌙",
-            "хтось ще тут? 👀"
+            "хтось ще тут? 👀",
+            "атмосфера зависла між треками…"
         ])
 
     return None
@@ -104,7 +103,7 @@ class LunaBrain:
             self.book = []
 
     # =========================
-    # 💬 RESPONSE ENGINE
+    # 💬 REPLY ENGINE
     # =========================
 
     def reply(self, user, msg):
@@ -112,49 +111,66 @@ class LunaBrain:
         global last_activity_time
 
         # 🔴 STOP CHECK
+        if not can_talk():
+            return ""
+
         if check_stop(msg):
             return "окей… мовчу 😌"
 
-        if is_stopped():
-            return ""
+        # 🟢 SESSION / ATTENTION RULE
+        if "луна" not in msg.lower() and "luna" not in msg.lower():
+            return ""  # ігнорує якщо не звернулись
 
-        # 🧠 CONTEXT
+        # 🧠 UPDATE
         update_context(user, msg)
-
-        # 🧠 LEARN
         learn_from_chat(user, msg)
 
-        # 📚 BOOK
+        # =========================
+        # 📚 BOOK + MEMORY
+        # =========================
+
         book_pick = random.choice(self.book) if self.book else ""
 
-        # 🧠 MEMORY
-        memory = get_random_memory()
+        memory_raw = get_random_memory()
+        memory = ""
 
-        if "]" in memory:
-            memory = memory.split("]", 1)[1].strip()
-
-        if memory.lower() == msg.lower():
-            memory = ""
+        if memory_raw and "]" in memory_raw:
+            memory = memory_raw.split("]", 1)[1].strip()
 
         # =========================
-        # MIX RESPONSE
+        # MIX PRIORITY
         # =========================
 
-        response = pick_response([book_pick], [memory], msg)
+        candidates = []
+
+        if memory:
+            candidates.append(memory)
+
+        if book_pick:
+            candidates.append(book_pick)
+
+        response = pick_response(candidates, [], msg)
 
         if not response:
-            response = book_pick
+            response = random.choice(candidates) if candidates else "я тут 😌"
 
-        if not response:
-            response = "я тут 😌"
+        # =========================
+        # MEMORY BOOST (ЖИВІСТЬ)
+        # =========================
 
-        # 🚫 repeat protection
+        if memory and random.random() < 0.35:
+            response = memory
+
+        # =========================
+        # ANTI REPEAT
+        # =========================
+
         if response == self.last_reply:
             response = random.choice([
-                "цікава атмосфера 😌",
-                "ніч сьогодні жива",
-                "ти в настрої говорити? 💃",
-                "клуб дихає музикою 🎧"
+                "ти ще тут? 👀",
+                "ніч трохи затихла…",
+                "клуб дихає музикою 🎧",
+                "цікава пауза 😌"
             ])
 
         self.last_reply = response
@@ -170,11 +186,3 @@ luna = LunaBrain()
 
 def handle_message(user, message):
     return luna.reply(user, message)
-
-
-# =========================
-# 🟡 EXTERNAL IDLE CALL
-# =========================
-
-def get_idle_message():
-    return check_idle()

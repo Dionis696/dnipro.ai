@@ -10,11 +10,11 @@ BOOK_FILE = "luna_book.txt"
 MEMORY_FILE = "luna_memory.txt"
 
 # =========================
-# SESSION SYSTEM (2 MIN CHAT)
+# DIALOG SESSION (2 MIN)
 # =========================
 
 active_sessions = {}
-DIALOG_TIMEOUT = 120  # 2 хвилини
+DIALOG_TIMEOUT = 120
 
 def update_session(user):
     now = time.time()
@@ -45,6 +45,34 @@ def save_memory(text):
         f.write(text + "\n")
 
 # =========================
+# LANGUAGE LOCK
+# =========================
+
+def detect_lang(msg):
+    msg = msg.lower()
+
+    if any(x in msg for x in ["hello", "what", "why", "how", "are you"]):
+        return "EN"
+
+    if any(x in msg for x in ["привет", "что", "почему"]):
+        return "RU"
+
+    return "UA"
+
+def enforce_lang(text, lang):
+
+    if lang == "UA":
+        text = text.replace("every", "").replace("you are", "")
+        text = text.replace("interesting vibe", "цікава атмосфера")
+        text = text.replace("night feels alive", "ніч жива")
+        text = text.replace("you", "ти")
+
+    if lang == "RU":
+        pass  # можна додати пізніше
+
+    return text
+
+# =========================
 # INTENT DETECTION
 # =========================
 
@@ -54,11 +82,14 @@ def detect_intent(msg):
     if "?" in msg:
         return "question"
 
-    if any(x in msg for x in ["сьогодні", "сегодня", "tonight", "dj", "сет", "лайн", "lineup"]):
+    if any(x in msg for x in ["dj", "сет", "сьогодні", "lineup", "що буде"]):
         return "event"
 
     if any(x in msg for x in ["вчора", "пам", "remember"]):
         return "memory"
+
+    if any(x in msg for x in ["істор", "story", "розкажи", "что было"]):
+        return "story"
 
     return "chat"
 
@@ -90,13 +121,11 @@ def pick(pool):
     return choice
 
 # =========================
-# LEARNING SYSTEM
+# MEMORY LEARN
 # =========================
 
 def learn(user, msg):
-    msg_low = msg.lower()
-
-    if len(msg_low) > 12 and "?" not in msg_low:
+    if len(msg) > 12 and "?" not in msg:
         save_memory(f"{user}: {msg}")
 
 # =========================
@@ -113,6 +142,7 @@ def process_luna_message(user, msg):
     book = load_file(BOOK_FILE)
     memory = load_file(MEMORY_FILE)
 
+    lang = detect_lang(msg_low)
     intent = detect_intent(msg_low)
     is_continuing = update_session(user)
 
@@ -122,22 +152,28 @@ def process_luna_message(user, msg):
     learn(user, msg)
 
     # =========================
-    # QUESTION MODE (TOP)
+    # QUESTION MODE
     # =========================
     if intent == "question":
 
         if "dj" in msg_low or "сет" in msg_low:
-            return pick([
-                "сьогодні лайнап ще уточнюється 😏",
-                "DJ сет буде пізніше 🔥",
-                "поки інтрига тримається"
-            ])
+            return enforce_lang(
+                pick([
+                    "сьогодні лайнап ще уточнюється 😏",
+                    "DJ сет буде пізніше 🔥",
+                    "поки інтрига тримається"
+                ]),
+                lang
+            )
 
-        return pick([
-            "цікаве питання 😏",
-            "я слухаю тебе",
-            "розкажи більше"
-        ])
+        return enforce_lang(
+            pick([
+                "цікаве питання 😏",
+                "я слухаю тебе",
+                "розкажи більше"
+            ]),
+            lang
+        )
 
     # =========================
     # EVENT MODE
@@ -151,43 +187,50 @@ def process_luna_message(user, msg):
             "вечір буде активний"
         ] + book[:20]
 
-        return pick(pool)
+        return enforce_lang(pick(pool), lang)
 
     # =========================
     # MEMORY MODE
     # =========================
     if intent == "memory":
 
-        return pick([
-            "ти вже про це згадував 😏",
-            "пам’ятаю цю тему",
-            "знайома історія"
-        ])
+        return enforce_lang(
+            pick([
+                "ти вже це згадував 😏",
+                "пам’ятаю цю тему",
+                "знайома історія"
+            ]),
+            lang
+        )
+
+    # =========================
+    # STORY MODE
+    # =========================
+    if intent == "story":
+
+        return enforce_lang(
+            pick([
+                "десь у клубі музика так зайшла, що всі просто танцювали до ранку 😏",
+                "кажуть тут був вечір коли світло зникло, але ніхто не зупинився",
+                "інколи найкращі ночі тут стаються випадково"
+            ]),
+            lang
+        )
 
     # =========================
     # CHAT MODE
     # =========================
 
-    # 🔥 IMPORTANT: CONTINUING DIALOG
     if is_continuing:
-
-        # НЕ скидаємо стиль, НЕ "я тут"
-        pool = book + memory
-        return pick(pool)
-
-    # =========================
-    # NEW DIALOG
-    # =========================
+        return enforce_lang(pick(book + memory), lang)
 
     if "luna" in msg_low or "луна" in msg_low:
-        pool = book + memory
-        return pick(pool)
+        return enforce_lang(pick(book + memory), lang)
 
     # =========================
     # IDLE MODE
     # =========================
-
     if random.random() < 0.02:
-        return pick(book)
+        return enforce_lang(pick(book), lang)
 
     return ""

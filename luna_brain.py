@@ -2,7 +2,7 @@ import random
 import time
 
 # =========================
-# 🧠 MEMORY STATE
+# MEMORY
 # =========================
 
 active_dialogs = {}
@@ -11,130 +11,101 @@ DIALOG_TIMEOUT = 180
 recent_replies = []
 MAX_RECENT = 10
 
-user_topic = {}
-
 # =========================
-# 💬 RESPONSES
+# RESPONSES
 # =========================
 
 responses = {
     "UA": {
+        "event": [
+            "сьогодні п’ятниця — буде танцювальний вечір 🔥",
+            "DJ сет сьогодні буде ближче до ночі 😏",
+            "в клубі планується активний вечір",
+            "лайнап ще уточнюється, але буде рух"
+        ],
         "dj": [
-            "DJ ще не назвав сет, але буде сильний 😏",
-            "він готує новий мікс зараз",
-            "скоро старт музики 🔥"
+            "DJ сьогодні готує новий сет 😏",
+            "буде жива музика і танцювальний настрій",
+            "він вже на підготовці"
         ],
-        "music": [
-            "сьогодні більше танцювального настрою 😏",
-            "музика буде змінюватись по ходу ночі",
-            "є нові треки в сеті"
-        ],
-        "dance": [
-            "давай рух 🔥",
-            "клуб вже готовий до танців",
-            "це момент для енергії 😏"
-        ],
-        "silence": [
-            "зараз спокійно, але це тимчасово",
-            "тиша перед рухом 😏",
-            "клуб чекає старту"
+        "info_event": [
+            "сьогодні буде клубний вечір з DJ сетом 🔥",
+            "точний лайнап ще не фіналізували",
+            "вечір буде з музикою і рухом 😏"
         ],
         "chat": [
             "я тут 🙂",
             "слухаю тебе",
             "кажи далі"
         ],
-        "answer_dj": [
-            "ще не оголошували назву сету 😏",
-            "поки тримають інтригу",
-            "це буде щось нове"
-        ],
-        "answer_general": [
-            "розкажи трохи більше",
-            "цікаво, продовжуй",
-            "я тебе слухаю"
+        "fallback": [
+            "цікаво 😏 розкажи більше",
+            "я тебе слухаю",
+            "продовжуй"
         ]
     },
 
     "RU": {
+        "event": [
+            "сегодня пятница — будет танцевальный вечер 🔥",
+            "DJ сет будет ближе к ночи 😏",
+            "в клубе планируется активный вечер",
+            "лайнап ещё уточняется"
+        ],
         "dj": [
-            "DJ ещё не объявил сет 😏",
-            "он готовит микс",
-            "скоро старт музыки 🔥"
+            "DJ сегодня готовит новый сет 😏",
+            "будет живая музыка и танцы",
+            "он уже на подготовке"
         ],
-        "music": [
-            "сегодня танцевальный настрой",
-            "музыка будет меняться",
-            "есть новые треки"
-        ],
-        "dance": [
-            "давай движение 🔥",
-            "клуб готов к танцам",
-            "энергия растёт 😏"
-        ],
-        "silence": [
-            "сейчас спокойно, но не надолго",
-            "тишина перед движением 😏",
-            "клуб ждёт старт"
+        "info_event": [
+            "сегодня клубный вечер с DJ сетом 🔥",
+            "точный лайнап пока не финальный",
+            "вечер будет с музыкой и движением 😏"
         ],
         "chat": [
             "я тут 🙂",
             "слушаю тебя",
             "говори"
         ],
-        "answer_dj": [
-            "название сета пока не сказали 😏",
-            "держат интригу",
-            "будет что-то новое"
-        ],
-        "answer_general": [
-            "расскажи подробнее",
-            "интересно, продолжай",
-            "я слушаю"
+        "fallback": [
+            "интересно 😏 расскажи больше",
+            "я слушаю",
+            "продолжай"
         ]
     },
 
     "EN": {
+        "event": [
+            "tonight is club night 🔥",
+            "DJ set will be later 😏",
+            "active evening planned",
+            "lineup is not fully confirmed"
+        ],
         "dj": [
-            "DJ hasn’t announced the set yet 😏",
-            "he is preparing a mix",
-            "music will start soon 🔥"
+            "DJ is preparing a new set 😏",
+            "there will be live music and dance vibes",
+            "he is getting ready"
         ],
-        "music": [
-            "tonight is more dance oriented",
-            "music will evolve",
-            "new tracks are included"
-        ],
-        "dance": [
-            "let’s move 🔥",
-            "club is ready",
-            "energy is rising 😏"
-        ],
-        "silence": [
-            "quiet now, but not for long",
-            "calm before the wave 😏",
-            "waiting for the start"
+        "info_event": [
+            "tonight is a club night with DJ set 🔥",
+            "lineup is still being confirmed",
+            "music and movement incoming 😏"
         ],
         "chat": [
             "I'm here 🙂",
             "listening",
             "go on"
         ],
-        "answer_dj": [
-            "they haven’t revealed the set name yet 😏",
-            "they keep it secret",
-            "something new is coming"
-        ],
-        "answer_general": [
-            "tell me more",
-            "interesting, continue",
-            "I'm listening"
+        "fallback": [
+            "interesting 😏 tell me more",
+            "I'm listening",
+            "continue"
         ]
     }
 }
 
 # =========================
-# 🌍 LANGUAGE
+# LANGUAGE
 # =========================
 
 def detect_lang(msg):
@@ -149,41 +120,35 @@ def detect_lang(msg):
     return "UA"
 
 # =========================
-# 🔥 TOPIC DETECTION
+# INTENT DETECTION (КЛЮЧОВЕ)
 # =========================
 
-def detect_topic(msg):
+def detect_intent(msg):
     msg = msg.lower()
 
-    # IMPORTANT: QUESTION FIRST RULE
-    if "?" in msg:
-        if "dj" in msg or "сет" in msg or "муз" in msg:
-            return "answer_dj"
-        return "answer_general"
+    # EVENT / CLUB INFO (головне)
+    if any(x in msg for x in [
+        "сьогодні", "сегодня", "tonight",
+        "що буде", "что будет", "what's happening",
+        "лайн", "lineup", "dj", "сет", "муз"
+    ]):
+        return "event"
 
-    if any(x in msg for x in ["dj", "сет"]):
+    # DJ specific
+    if "dj" in msg or "сет" in msg:
         return "dj"
-
-    if any(x in msg for x in ["муз", "music", "треки"]):
-        return "music"
-
-    if any(x in msg for x in ["танц", "dance", "рух"]):
-        return "dance"
-
-    if any(x in msg for x in ["тихо", "тишина", "нема"]):
-        return "silence"
 
     return "chat"
 
 # =========================
-# 🧠 ANTI REPEAT
+# ANTI REPEAT
 # =========================
 
-def safe_pick(lang, topic):
+def safe_pick(lang, intent):
 
     global recent_replies
 
-    pool = responses[lang].get(topic, responses[lang]["chat"])
+    pool = responses[lang].get(intent, responses[lang]["fallback"])
 
     available = [x for x in pool if x not in recent_replies]
 
@@ -201,56 +166,35 @@ def safe_pick(lang, topic):
     return choice
 
 # =========================
-# 🎯 MAIN
+# MAIN
 # =========================
 
 def process_luna_message(user, msg):
-
-    now = time.time()
 
     if not msg:
         return ""
 
     msg_low = msg.lower()
     lang = detect_lang(msg_low)
-    topic = detect_topic(msg_low)
-
-    # save topic per user
-    user_topic[user] = topic
-
-    dialog = active_dialogs.get(user)
-
-    if dialog:
-        if now - dialog["time"] > DIALOG_TIMEOUT:
-            active_dialogs.pop(user)
-            dialog = None
+    intent = detect_intent(msg_low)
 
     # =========================
-    # 🔥 ACTIVE DIALOG
+    # ACTIVE MODE
     # =========================
 
-    if "luna" in msg_low or "луна" in msg_low or dialog:
+    if "luna" in msg_low or "луна" in msg_low:
 
-        if not dialog:
-            active_dialogs[user] = {
-                "time": now,
-                "lang": lang,
-                "topic": topic
-            }
-            dialog = active_dialogs[user]
+        # EVENT PRIORITY (КРИТИЧНО)
+        if intent == "event":
+            return safe_pick(lang, "event")
 
-        lang = dialog["lang"]
-        dialog["time"] = now
+        if intent == "dj":
+            return safe_pick(lang, "dj")
 
-        # TOPIC LOCK (важливо)
-        locked_topic = dialog.get("topic", topic)
-
-        reply = safe_pick(lang, locked_topic)
-
-        return reply
+        return safe_pick(lang, "chat")
 
     # =========================
-    # 🤫 IDLE MODE
+    # IDLE MODE
     # =========================
 
     if random.random() < 0.02:

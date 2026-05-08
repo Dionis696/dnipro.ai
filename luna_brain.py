@@ -2,7 +2,7 @@ import random
 import time
 
 # =========================
-# 🧠 MEMORY
+# 🧠 MEMORY STATE
 # =========================
 
 active_dialogs = {}
@@ -11,92 +11,124 @@ DIALOG_TIMEOUT = 180
 recent_replies = []
 MAX_RECENT = 10
 
-last_scene_reply = {}
+user_topic = {}
 
 # =========================
-# 💬 RESPONSES BY ENERGY
+# 💬 RESPONSES
 # =========================
 
 responses = {
     "UA": {
-        "low": [
-            "тиша сьогодні в клубі",
-            "спокійний вечір",
-            "атмосфера розслаблена"
-        ],
-        "normal": [
-            "ніч жива 🙂",
-            "цікава атмосфера",
-            "щось відчувається в повітрі"
-        ],
-        "high": [
-            "давай рух 😏 музика вже грає",
-            "клуб прокидається 🔥",
-            "це вже вечір для танців"
-        ],
         "dj": [
-            "DJ зараз готує сильний сет 😏",
-            "буде різкий підйом музики",
-            "він тестить нові треки"
+            "DJ ще не назвав сет, але буде сильний 😏",
+            "він готує новий мікс зараз",
+            "скоро старт музики 🔥"
         ],
-        "repetition_block": [
-            "ми це вже трохи обговорювали 🙂",
-            "давай щось нове",
-            "ти повторюєшся трохи"
+        "music": [
+            "сьогодні більше танцювального настрою 😏",
+            "музика буде змінюватись по ходу ночі",
+            "є нові треки в сеті"
+        ],
+        "dance": [
+            "давай рух 🔥",
+            "клуб вже готовий до танців",
+            "це момент для енергії 😏"
+        ],
+        "silence": [
+            "зараз спокійно, але це тимчасово",
+            "тиша перед рухом 😏",
+            "клуб чекає старту"
+        ],
+        "chat": [
+            "я тут 🙂",
+            "слухаю тебе",
+            "кажи далі"
+        ],
+        "answer_dj": [
+            "ще не оголошували назву сету 😏",
+            "поки тримають інтригу",
+            "це буде щось нове"
+        ],
+        "answer_general": [
+            "розкажи трохи більше",
+            "цікаво, продовжуй",
+            "я тебе слухаю"
         ]
     },
+
     "RU": {
-        "low": [
-            "тихо сегодня в клубе",
-            "спокойный вечер",
-            "расслабленная атмосфера"
-        ],
-        "normal": [
-            "ночь живая 🙂",
-            "интересная атмосфера",
-            "что-то в воздухе"
-        ],
-        "high": [
-            "давай движение 😏 музыка уже играет",
-            "клуб оживает 🔥",
-            "это вечер для танцев"
-        ],
         "dj": [
-            "DJ готовит сильный сет 😏",
-            "будет подъем музыки",
-            "он тестирует новые треки"
+            "DJ ещё не объявил сет 😏",
+            "он готовит микс",
+            "скоро старт музыки 🔥"
         ],
-        "repetition_block": [
-            "мы это уже обсуждали 🙂",
-            "давай новое",
-            "ты повторяешься"
+        "music": [
+            "сегодня танцевальный настрой",
+            "музыка будет меняться",
+            "есть новые треки"
+        ],
+        "dance": [
+            "давай движение 🔥",
+            "клуб готов к танцам",
+            "энергия растёт 😏"
+        ],
+        "silence": [
+            "сейчас спокойно, но не надолго",
+            "тишина перед движением 😏",
+            "клуб ждёт старт"
+        ],
+        "chat": [
+            "я тут 🙂",
+            "слушаю тебя",
+            "говори"
+        ],
+        "answer_dj": [
+            "название сета пока не сказали 😏",
+            "держат интригу",
+            "будет что-то новое"
+        ],
+        "answer_general": [
+            "расскажи подробнее",
+            "интересно, продолжай",
+            "я слушаю"
         ]
     },
+
     "EN": {
-        "low": [
-            "quiet night in the club",
-            "calm atmosphere",
-            "relaxed vibe"
-        ],
-        "normal": [
-            "night feels alive 🙂",
-            "interesting vibe",
-            "something in the air"
-        ],
-        "high": [
-            "let’s move 😏 music is up",
-            "club is waking up 🔥",
-            "this is dance time"
-        ],
         "dj": [
-            "DJ is preparing a strong set 😏",
-            "music is about to rise",
-            "he is testing new tracks"
+            "DJ hasn’t announced the set yet 😏",
+            "he is preparing a mix",
+            "music will start soon 🔥"
         ],
-        "repetition_block": [
-            "we already covered that 🙂",
-            "let’s go further",
-            "you’re repeating a bit"
+        "music": [
+            "tonight is more dance oriented",
+            "music will evolve",
+            "new tracks are included"
+        ],
+        "dance": [
+            "let’s move 🔥",
+            "club is ready",
+            "energy is rising 😏"
+        ],
+        "silence": [
+            "quiet now, but not for long",
+            "calm before the wave 😏",
+            "waiting for the start"
+        ],
+        "chat": [
+            "I'm here 🙂",
+            "listening",
+            "go on"
+        ],
+        "answer_dj": [
+            "they haven’t revealed the set name yet 😏",
+            "they keep it secret",
+            "something new is coming"
+        ],
+        "answer_general": [
+            "tell me more",
+            "interesting, continue",
+            "I'm listening"
         ]
     }
 }
@@ -117,42 +149,56 @@ def detect_lang(msg):
     return "UA"
 
 # =========================
-# 🔥 SCENE DETECTION
+# 🔥 TOPIC DETECTION
 # =========================
 
-def detect_scene(msg):
+def detect_topic(msg):
     msg = msg.lower()
 
-    # HIGH ENERGY
-    if any(x in msg for x in ["танц", "dance", "рух", "party", "давай"]):
-        return "high"
+    # IMPORTANT: QUESTION FIRST RULE
+    if "?" in msg:
+        if "dj" in msg or "сет" in msg or "муз" in msg:
+            return "answer_dj"
+        return "answer_general"
 
-    # DJ MODE
-    if "dj" in msg or "муз" in msg or "сет" in msg:
+    if any(x in msg for x in ["dj", "сет"]):
         return "dj"
 
-    # LOW
-    if any(x in msg for x in ["тихо", "нема", "тишина"]):
-        return "low"
+    if any(x in msg for x in ["муз", "music", "треки"]):
+        return "music"
 
-    return "normal"
+    if any(x in msg for x in ["танц", "dance", "рух"]):
+        return "dance"
+
+    if any(x in msg for x in ["тихо", "тишина", "нема"]):
+        return "silence"
+
+    return "chat"
 
 # =========================
-# 🧠 ANTI REPEAT SCENE
+# 🧠 ANTI REPEAT
 # =========================
 
-def anti_repeat(user, msg_type, reply):
+def safe_pick(lang, topic):
 
-    key = f"{user}:{msg_type}"
+    global recent_replies
 
-    last = last_scene_reply.get(key)
+    pool = responses[lang].get(topic, responses[lang]["chat"])
 
-    if last == reply:
-        return random.choice(responses["UA"]["repetition_block"])
+    available = [x for x in pool if x not in recent_replies]
 
-    last_scene_reply[key] = reply
+    if not available:
+        recent_replies = []
+        available = pool
 
-    return reply
+    choice = random.choice(available)
+
+    recent_replies.append(choice)
+
+    if len(recent_replies) > MAX_RECENT:
+        recent_replies.pop(0)
+
+    return choice
 
 # =========================
 # 🎯 MAIN
@@ -166,9 +212,11 @@ def process_luna_message(user, msg):
         return ""
 
     msg_low = msg.lower()
-
     lang = detect_lang(msg_low)
-    scene = detect_scene(msg_low)
+    topic = detect_topic(msg_low)
+
+    # save topic per user
+    user_topic[user] = topic
 
     dialog = active_dialogs.get(user)
 
@@ -178,7 +226,7 @@ def process_luna_message(user, msg):
             dialog = None
 
     # =========================
-    # 🔥 ACTIVE MODE
+    # 🔥 ACTIVE DIALOG
     # =========================
 
     if "luna" in msg_low or "луна" in msg_low or dialog:
@@ -187,26 +235,25 @@ def process_luna_message(user, msg):
             active_dialogs[user] = {
                 "time": now,
                 "lang": lang,
-                "scene": scene
+                "topic": topic
             }
             dialog = active_dialogs[user]
 
         lang = dialog["lang"]
-
         dialog["time"] = now
-        dialog["scene"] = scene
 
-        pool = responses[lang][scene]
+        # TOPIC LOCK (важливо)
+        locked_topic = dialog.get("topic", topic)
 
-        reply = random.choice(pool)
+        reply = safe_pick(lang, locked_topic)
 
-        return anti_repeat(user, scene, reply)
+        return reply
 
     # =========================
-    # 🤫 IDLE REACTION
+    # 🤫 IDLE MODE
     # =========================
 
     if random.random() < 0.02:
-        return random.choice(responses[lang]["normal"])
+        return safe_pick(lang, "chat")
 
     return ""

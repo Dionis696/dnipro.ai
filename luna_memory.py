@@ -1,5 +1,6 @@
 import os
 import random
+import time
 
 # =========================
 # 📁 FILE PATH
@@ -15,31 +16,6 @@ MEM_FILE = os.path.join(BASE_DIR, "luna_memory.txt")
 if not os.path.exists(MEM_FILE):
     with open(MEM_FILE, "w", encoding="utf-8") as f:
         f.write("")
-
-# =========================
-# 🧠 MEMORY STORAGE
-# =========================
-
-phrase_memory = []
-
-# =========================
-# 📥 LOAD MEMORY
-# =========================
-
-def load_memory():
-    global phrase_memory
-
-    try:
-        with open(MEM_FILE, "r", encoding="utf-8") as f:
-            phrase_memory = [
-                line.strip()
-                for line in f
-                if line.strip()
-            ]
-    except:
-        phrase_memory = []
-
-load_memory()
 
 # =========================
 # 🚫 VALIDATION
@@ -58,10 +34,16 @@ def is_valid(text):
     if len(text) > 250:
         return False
 
+    # занадто шумні повідомлення
+    bad_ratio = len([c for c in text if not c.isalnum() and c not in " .,!?-"]) / max(len(text), 1)
+    if bad_ratio > 0.4:
+        return False
+
     return True
 
+
 # =========================
-# 💾 SAVE PHRASE
+# 💾 SAVE MEMORY
 # =========================
 
 def save_phrase(user, text):
@@ -69,75 +51,76 @@ def save_phrase(user, text):
     if not is_valid(text):
         return
 
-    # 🚫 Luna НЕ вчиться сама на собі
     if user.lower() == "luna":
         return
 
-    # 🚫 не зберігати системні штуки
     if text.startswith("["):
         return
 
     entry = f"[{user}] {text}"
 
-    # 🚫 no duplicates
-    if entry in phrase_memory:
-        return
-
-    phrase_memory.append(entry)
-
-    # 🚫 limit
-    if len(phrase_memory) > 2000:
-        phrase_memory.pop(0)
-
-    # 💾 SAVE TO FILE
     try:
         with open(MEM_FILE, "a", encoding="utf-8") as f:
             f.write(entry + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+    except:
+        pass
 
-    except Exception as e:
-        print("MEMORY ERROR:", e)
 
 # =========================
-# 🧠 LEARN FROM CHAT
+# 🧠 LEARN
 # =========================
 
 def learn_from_chat(user, message):
-
     save_phrase(user, message)
 
+
 # =========================
-# 🎲 GET RANDOM MEMORY
+# 🎯 SMART MEMORY PICK (ВАЖЛИВО)
 # =========================
 
 def get_random_memory():
 
-    if not phrase_memory:
+    try:
+        with open(MEM_FILE, "r", encoding="utf-8") as f:
+            lines = [x.strip() for x in f if x.strip()]
+    except:
         return ""
 
-    # 🚫 беремо тільки людські фрази
+    if not lines:
+        return ""
+
     clean = []
 
-    for x in phrase_memory:
+    for x in lines:
 
-        # remove [USER]
         if "]" in x:
             text = x.split("]", 1)[1].strip()
         else:
             text = x.strip()
 
-        if text:
-            clean.append(text)
+        if len(text) < 3:
+            continue
+
+        clean.append(text)
 
     if not clean:
         return ""
 
+    # 🔥 НЕ просто random — інколи останні спогади важливіші
+    if random.random() < 0.3 and len(clean) > 5:
+        return clean[-1]  # останній досвід
+
     return random.choice(clean)
 
+
 # =========================
-# 📊 DEBUG
+# 📊 MEMORY STATS
 # =========================
 
 def memory_size():
-    return len(phrase_memory)
+
+    try:
+        with open(MEM_FILE, "r", encoding="utf-8") as f:
+            return len(f.readlines())
+    except:
+        return 0

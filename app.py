@@ -1,7 +1,7 @@
 from flask import Flask, request, Response
 import json
 
-from luna_brain import luna
+from luna_brain import luna, check_idle
 
 app = Flask(__name__)
 
@@ -18,8 +18,18 @@ def chat():
     message = data.get("message", "")
 
     try:
+
         reply = luna.reply(user, message)
+
+        # 🌙 IDLE MODE
+        if not reply:
+            reply = check_idle()
+
+        if not reply:
+            reply = ""
+
     except Exception as e:
+
         print("Luna ERROR:", e)
         reply = ""
 

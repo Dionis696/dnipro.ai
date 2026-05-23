@@ -219,11 +219,9 @@ def load_book(lang):
 
         with open(filename, "r", encoding="utf-8") as f:
 
-            return [
-                x.strip()
-                for x in f
-                if x.strip()
-            ]
+            lines = [x.strip() for x in f if x.strip()]
+            random.shuffle(lines)  # 🔥 більше різноманіття
+            return lines
 
     except:
 
@@ -239,10 +237,6 @@ class LunaBrain:
     def __init__(self):
 
         self.last_responses = []
-
-    # =========================
-    # 🌍 LANGUAGE DETECT
-    # =========================
 
     def detect_lang(self, text):
 
@@ -263,204 +257,76 @@ class LunaBrain:
 
         return "ua"
 
-    # =========================
-    # 💬 REPLY
-    # =========================
-
     def reply(self, user, msg):
 
         global session_lang
 
         msg_l = msg.lower()
 
-        # 🔴 STOP
         if re.search(r"\bstop\b", msg_l) or "луна стоп" in msg_l:
-
             trigger_stop()
-
             return "окей… мовчу 😌"
 
         if not can_talk():
             return ""
 
-        # 🟢 SESSION UPDATE
         session_tick()
 
-        # 🟢 OPEN SESSION
         if "луна" in msg_l or "luna" in msg_l:
-
             detected_lang = self.detect_lang(msg)
-
             open_session(user, detected_lang)
 
-        # 🧠 remember people
         remember_people(msg)
 
-        # 🔵 SESSION RULE
         if not in_session(user):
             return ""
 
         update_activity()
 
-        # 🧠 learn
         learn_from_chat(user, msg)
 
-        # 😂 reaction engine
         react = reaction_reply(msg)
-
         if react:
             return react
 
-        # 🌍 locked language
         lang = session_lang
-
-        # 📚 LOAD BOOK
         book = load_book(lang)
 
-        # =========================
-        # 🎲 60 / 40 SYSTEM
-        # =========================
-
-        response_source = "book"
-
-        if random.random() > 0.6:
-            response_source = "memory"
-
-        book_pick = ""
+        book_pick = book[0] if book else ""
         memory = ""
 
-        # 📚 BOOK
-        if response_source == "book":
-
-            if book:
-                book_pick = random.choice(book)
-
-        # 🧠 MEMORY
-        else:
-
-            memory_raw = get_random_memory()
-
-            if memory_raw and "]" in memory_raw:
-
-                memory = memory_raw.split("]", 1)[1].strip()
-
-        # 🌍 MEMORY LANGUAGE FILTER
-        if memory:
-
-            memory_lang = self.detect_lang(memory)
-
-            if memory_lang != lang:
-                memory = ""
-
-        # 🚫 anti echo
-        if memory.lower() == msg.lower():
-            memory = ""
-
-        # 👑 owners
-        if "овнер" in msg_l or "owner" in msg_l:
-
-            if club_owners:
-
-                return f"я знаю хто тут головний 😏 {random.choice(club_owners)}"
-
-        # 🎧 djs
-        if "діджей" in msg_l or "dj" in msg_l:
-
-            if club_djs:
-
-                return f"сьогодні вайб робить {random.choice(club_djs)} 🔥"
-
-        # 🎲 POOL
         pool = []
 
         if book_pick:
             pool.append(book_pick)
 
-        if memory:
-            pool.append(memory)
-
-        # 🔥 fallback
         if not pool:
+            return random.choice([
+                "я слухаю 😌",
+                "ніч сьогодні цікава 🌙",
+                "клуб живе музикою 🎧"
+            ])
 
-            fallback = {
-
-                "ua": [
-                    "я слухаю 😌",
-                    "ніч сьогодні цікава 🌙",
-                    "клуб живе музикою 🎧"
-                ],
-
-                "ru": [
-                    "я слушаю 😌",
-                    "ночь сегодня интересная 🌙",
-                    "клуб живёт музыкой 🎧"
-                ],
-
-                "en": [
-                    "i hear you 😌",
-                    "the vibe is alive 🌙",
-                    "music never sleeps 🎧"
-                ]
-            }
-
-            return random.choice(
-                fallback.get(lang, ["😌"])
-            )
-
-        # 🎲 FINAL RESPONSE
         response = pick_response(pool, [], msg)
 
         if not response:
             response = random.choice(pool)
 
-        # 🌍 LANGUAGE SAFETY
-        if lang == "ua":
+        # 🔁 СИЛЬНИЙ анти-повтор
+        attempts = 0
+        while response in self.last_responses and attempts < 5:
+            if book:
+                response = random.choice(book)
+            attempts += 1
 
-            if any(x in response.lower() for x in [
-                "the ",
-                "you ",
-                "this "
-            ]):
-
-                response = random.choice([
-                    "я тебе чую 👀",
-                    "клуб живе 😌",
-                    "ніч сьогодні цікава 🌙"
-                ])
-
-        # 🔁 anti repeat
-        if response in self.last_responses:
-
-            anti = {
-
-                "ua": [
-                    "ти сьогодні загадковий 😏",
-                    "я тебе слухаю 👀",
-                    "атмосфера змінюється 🔥"
-                ],
-
-                "ru": [
-                    "ночь ещё живая 🌙",
-                    "я тебя слушаю 😌",
-                    "атмосфера меняется 🔥"
-                ],
-
-                "en": [
-                    "the night is alive 🌙",
-                    "music feels different tonight 🎧",
-                    "i hear you 😌"
-                ]
-            }
-
-            response = random.choice(
-                anti.get(lang, ["😌"])
-            )
-
-        # 💾 remember responses
+        # 💾 cache
         self.last_responses.append(response)
-
         if len(self.last_responses) > 8:
             self.last_responses.pop(0)
+
+        # 😏 ІМ'Я ПЕРЕД ФРАЗОЮ (60%)
+        if random.random() < 0.6:
+            response = f"{user} 😏 {response}"
 
         return response
 

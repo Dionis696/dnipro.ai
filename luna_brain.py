@@ -27,6 +27,10 @@ party_lines = [
 chat_counter = 0
 learned_party = []
 
+# 🔥 НОВЕ
+party_trigger_count = 0
+last_party_time = 0
+
 
 def learn_party(msg):
 
@@ -325,7 +329,9 @@ class LunaBrain:
     def reply(self, user, msg):
 
         global session_lang
-        global chat_counter  # 🔥 ДОДАНО
+        global chat_counter
+        global party_trigger_count
+        global last_party_time
 
         msg_l = msg.lower()
 
@@ -348,6 +354,31 @@ class LunaBrain:
 
         remember_people(msg)
 
+        # 🔥 ====== НОВА ЛОГІКА КРИЧАЛОК ======
+
+        is_party = (
+            len(msg) > 40 and
+            any(sym in msg for sym in ["🎧", "🔥", "♪", "★", "☆", "🎤"])
+        )
+
+        if is_party:
+            learn_party(msg)
+            party_trigger_count += 1
+
+        if party_trigger_count >= 3:
+
+            if time.time() - last_party_time > 600:
+
+                party_trigger_count = 0
+                last_party_time = time.time()
+
+                if learned_party and random.random() < 0.5:
+                    return random.choice(learned_party)
+
+                return random.choice(party_lines)
+
+        # 🔥 ====== КІНЕЦЬ ======
+
         # 🔥 ДОДАНО (реакція без луна)
         if not in_session(user):
             react = reaction_reply(msg)
@@ -357,7 +388,6 @@ class LunaBrain:
 
         update_activity()
 
-        # 🔥 ДОДАНО
         learn_party(msg)
 
         chat_counter += 1
@@ -368,7 +398,6 @@ class LunaBrain:
                 if learned_party and random.random() < 0.5:
                     return random.choice(learned_party)
                 return random.choice(party_lines)
-        # 🔥 КІНЕЦЬ
 
         learn_from_chat(user, msg)
 
@@ -478,7 +507,6 @@ class LunaBrain:
                     "ніч сьогодні цікава 🌙"
                 ])
 
-        # 🔧 ТІЛЬКИ ЦЕ ДОДАНО (анти-повтор)
         attempts = 0
         while response in self.last_responses and attempts < 5:
             if book:
@@ -490,16 +518,11 @@ class LunaBrain:
         if len(self.last_responses) > 8:
             self.last_responses.pop(0)
 
-        # 🔧 ТІЛЬКИ ЦЕ ДОДАНО (ім’я)
         if random.random() < 0.6:
             response = f"{user} 😏 {response}"
 
         return response
 
-
-# =========================
-# 🚀 INSTANCE
-# =========================
 
 luna = LunaBrain()
 

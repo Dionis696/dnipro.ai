@@ -27,7 +27,7 @@ party_lines = [
 learned_party = []
 party_trigger_count = 0
 last_party_time = 0
-last_greet_time = 0  # анти-спам привітів
+last_greet_time = 0
 
 
 def learn_party(msg):
@@ -109,6 +109,14 @@ def session_tick():
 
 
 # =========================
+# 🌙 IDLE (щоб не падав Render)
+# =========================
+
+def check_idle():
+    return None
+
+
+# =========================
 # 😂 REACTIONS
 # =========================
 
@@ -119,7 +127,7 @@ def reaction_reply(msg):
 
     greetings = ["привіт", "привет", "hallo", "лабас"]
 
-    # 🔥 анти-спам привітів
+    # 🔥 анти-спам
     if any(g in text for g in greetings):
         if time.time() - last_greet_time < 30:
             return None
@@ -199,6 +207,7 @@ class LunaBrain:
 
         learn_from_chat(user, msg)
 
+        # 📚 книги
         book = []
         try:
             with open(f"luna_book_{session_lang}.txt", encoding="utf-8") as f:
@@ -219,9 +228,10 @@ class LunaBrain:
 
         response = random.choice(pool)
 
-        # анти-повтор
+        # 🔁 анти-повтор
         if response in self.last_responses:
-            response = random.choice(book) if book else response
+            if book:
+                response = random.choice(book)
 
         self.last_responses.append(response)
 

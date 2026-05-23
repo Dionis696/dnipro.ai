@@ -70,7 +70,7 @@ last_activity_time = time.time()
 
 club_owners = []
 club_djs = []
-
+last_greet_time = 0
 
 # =========================
 # 🔴 STOP SYSTEM
@@ -381,10 +381,24 @@ class LunaBrain:
 
         # 🔥 ДОДАНО (реакція без луна)
         if not in_session(user):
-            react = reaction_reply(msg)
-            if react:
-                return react
-            return ""
+
+    react = reaction_reply(msg)
+
+    if react:
+
+        global last_greet_time
+
+        # анти-спам привітів
+        if any(x in msg_l for x in ["привіт", "привет", "hallo", "лабас"]):
+
+            if time.time() - last_greet_time < 5:
+                return ""
+
+            last_greet_time = time.time()
+
+        return react
+
+    return ""
 
         update_activity()
 

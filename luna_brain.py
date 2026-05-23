@@ -30,6 +30,14 @@ last_party_time = 0
 last_greet_time = 0
 
 
+# 🔥 ОЧИСТКА НІКА (НОВЕ)
+def clean_user(user):
+    trash = ["Resident", "VIP", "Admin", "Moderator"]
+    for t in trash:
+        user = user.replace(t, "")
+    return user.strip()
+
+
 def learn_party(msg):
     global learned_party
 
@@ -109,7 +117,7 @@ def session_tick():
 
 
 # =========================
-# 🌙 IDLE (щоб не падав Render)
+# 🌙 IDLE (щоб Render не падав)
 # =========================
 
 def check_idle():
@@ -127,7 +135,7 @@ def reaction_reply(msg):
 
     greetings = ["привіт", "привет", "hallo", "лабас"]
 
-    # 🔥 анти-спам
+    # 🔥 анти-спам привітів
     if any(g in text for g in greetings):
         if time.time() - last_greet_time < 30:
             return None
@@ -171,6 +179,8 @@ class LunaBrain:
     def reply(self, user, msg):
 
         global party_trigger_count, last_party_time
+
+        user = clean_user(user)  # 🔥 ОЧИСТКА НІКА
 
         msg_l = msg.lower()
 
@@ -224,7 +234,7 @@ class LunaBrain:
             pool.append(memory)
 
         if not pool:
-            return "я тут 😌"
+            return f"{user} 😌 я тут"
 
         response = random.choice(pool)
 

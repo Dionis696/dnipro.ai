@@ -39,13 +39,38 @@ def learn_party(msg):
 
     text = msg.strip()
 
-    if len(text) < 40:
+    # 🔥 короткі кричалки тепер теж вчаться
+    if len(text) < 8:
         return
 
     if len(text) > 400:
         return
 
-    if not any(sym in text for sym in ["★", "☆", "🎧", "🔥", "♪", "❤", "✯", "🎤"]):
+    party_words = [
+        "dj",
+        "діджей",
+        "music",
+        "party",
+        "pump",
+        "bravo",
+        "wooo",
+        "yaaa",
+        "🔥",
+        "🎧",
+        "♪",
+        "❤",
+        "✯",
+        "🎤",
+        "donate",
+        "донат"
+    ]
+
+    # 🔥 або символи або party слова
+    if not (
+        any(sym in text for sym in ["★", "☆", "🎧", "🔥", "♪", "❤", "✯", "🎤"])
+        or
+        any(word in text.lower() for word in party_words)
+    ):
         return
 
     if text in learned_party:
@@ -53,7 +78,8 @@ def learn_party(msg):
 
     learned_party.append(text)
 
-    if len(learned_party) > 20:
+    # 🔥 memory limit
+    if len(learned_party) > 30:
         learned_party.pop(0)
 # 🔥 ====== КІНЕЦЬ ДОДАНО ======
 
@@ -327,16 +353,45 @@ class LunaBrain:
         return "ua"
 
     # =========================
-    # 💬 REPLY
-    # =========================
+# 💬 REPLY
+# =========================
 
-    def reply(self, user, msg):
+def get_reply(user, msg):
 
-        global session_lang
+    update_activity()
 
-        msg_l = msg.lower()
+    msg_l = msg.lower()
 
-        # 🔴 STOP
+    # 🔥 PARTY DETECT
+    global party_trigger_count
+
+    party_words = [
+        "dj",
+        "діджей",
+        "music",
+        "party",
+        "pump",
+        "bravo",
+        "wooo",
+        "yaaa",
+        "🔥",
+        "🎧",
+        "♪",
+        "donate",
+        "донат",
+        "go dj"
+    ]
+
+    if any(word in msg_l for word in party_words):
+
+        learn_party(msg)
+
+        party_trigger_count += 1
+
+    # reactions
+    reaction = reaction_reply(user, msg_l)
+
+    # 🔴 STOP
         if re.search(r"\bstop\b", msg_l) or "луна стоп" in msg_l:
 
             trigger_stop()

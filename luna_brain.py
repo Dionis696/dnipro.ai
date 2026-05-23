@@ -219,9 +219,11 @@ def load_book(lang):
 
         with open(filename, "r", encoding="utf-8") as f:
 
-            lines = [x.strip() for x in f if x.strip()]
-            random.shuffle(lines)  # 🔥 більше різноманіття
-            return lines
+            return [
+                x.strip()
+                for x in f
+                if x.strip()
+            ]
 
     except:
 
@@ -264,7 +266,9 @@ class LunaBrain:
         msg_l = msg.lower()
 
         if re.search(r"\bstop\b", msg_l) or "луна стоп" in msg_l:
+
             trigger_stop()
+
             return "окей… мовчу 😌"
 
         if not can_talk():
@@ -273,7 +277,9 @@ class LunaBrain:
         session_tick()
 
         if "луна" in msg_l or "luna" in msg_l:
+
             detected_lang = self.detect_lang(msg)
+
             open_session(user, detected_lang)
 
         remember_people(msg)
@@ -286,45 +292,124 @@ class LunaBrain:
         learn_from_chat(user, msg)
 
         react = reaction_reply(msg)
+
         if react:
             return react
 
         lang = session_lang
+
         book = load_book(lang)
 
-        book_pick = book[0] if book else ""
+        response_source = "book"
+
+        if random.random() > 0.6:
+            response_source = "memory"
+
+        book_pick = ""
         memory = ""
+
+        if response_source == "book":
+
+            if book:
+                book_pick = random.choice(book)
+
+        else:
+
+            memory_raw = get_random_memory()
+
+            if memory_raw and "]" in memory_raw:
+
+                memory = memory_raw.split("]", 1)[1].strip()
+
+        if memory:
+
+            memory_lang = self.detect_lang(memory)
+
+            if memory_lang != lang:
+                memory = ""
+
+        if memory.lower() == msg.lower():
+            memory = ""
+
+        if "овнер" in msg_l or "owner" in msg_l:
+
+            if club_owners:
+
+                return f"я знаю хто тут головний 😏 {random.choice(club_owners)}"
+
+        if "діджей" in msg_l or "dj" in msg_l:
+
+            if club_djs:
+
+                return f"сьогодні вайб робить {random.choice(club_djs)} 🔥"
 
         pool = []
 
         if book_pick:
             pool.append(book_pick)
 
+        if memory:
+            pool.append(memory)
+
         if not pool:
-            return random.choice([
-                "я слухаю 😌",
-                "ніч сьогодні цікава 🌙",
-                "клуб живе музикою 🎧"
-            ])
+
+            fallback = {
+
+                "ua": [
+                    "я слухаю 😌",
+                    "ніч сьогодні цікава 🌙",
+                    "клуб живе музикою 🎧"
+                ],
+
+                "ru": [
+                    "я слушаю 😌",
+                    "ночь сегодня интересная 🌙",
+                    "клуб живёт музыкой 🎧"
+                ],
+
+                "en": [
+                    "i hear you 😌",
+                    "the vibe is alive 🌙",
+                    "music never sleeps 🎧"
+                ]
+            }
+
+            return random.choice(
+                fallback.get(lang, ["😌"])
+            )
 
         response = pick_response(pool, [], msg)
 
         if not response:
             response = random.choice(pool)
 
-        # 🔁 СИЛЬНИЙ анти-повтор
+        if lang == "ua":
+
+            if any(x in response.lower() for x in [
+                "the ",
+                "you ",
+                "this "
+            ]):
+
+                response = random.choice([
+                    "я тебе чую 👀",
+                    "клуб живе 😌",
+                    "ніч сьогодні цікава 🌙"
+                ])
+
+        # 🔧 ТІЛЬКИ ЦЕ ДОДАНО (анти-повтор)
         attempts = 0
         while response in self.last_responses and attempts < 5:
             if book:
                 response = random.choice(book)
             attempts += 1
 
-        # 💾 cache
         self.last_responses.append(response)
+
         if len(self.last_responses) > 8:
             self.last_responses.pop(0)
 
-        # 😏 ІМ'Я ПЕРЕД ФРАЗОЮ (60%)
+        # 🔧 ТІЛЬКИ ЦЕ ДОДАНО (ім’я)
         if random.random() < 0.6:
             response = f"{user} 😏 {response}"
 

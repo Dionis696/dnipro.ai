@@ -6,6 +6,53 @@ from luna_memory import learn_from_chat, get_random_memory
 from luna_mixer import pick_response
 
 
+# 🔥 ====== ДОДАНО (КРИЧАЛКИ) ======
+party_lines = [
+    "🎧 IN THE MIX 🔥",
+    "Dnipro Club на зв’язку 😎",
+    "музику гучніше 🎧🔥",
+    "танцпол горить 💃",
+    "всім гарного настрою 😏",
+
+    "¸.•*Ukraine Club \"DNIPRO\" `*•.¸",
+    "Welcome to Ukraine🎤 club \"DNIPRO\"",
+    ".....♪GREAT MUSIC♪.....🎧 GREAT DEEJAY🎧 ....㋡GREAT PEOPLE◔◡◔....",
+    "~`\"Welcome to the Party!!\"~`",
+    "Ласкаво просимо на вечірку!!",
+    "ВСІМ ПОЗИТИВНОГО НАСТРОЮ",
+    "🤘 𝓓𝓝𝓘𝓟𝓡𝓞 🤘",
+    "🎤 МУЗИКУ НА ПОВНУ 🔥"
+]
+
+chat_counter = 0
+learned_party = []
+
+
+def learn_party(msg):
+
+    global learned_party
+
+    text = msg.strip()
+
+    if len(text) < 40:
+        return
+
+    if len(text) > 400:
+        return
+
+    if not any(sym in text for sym in ["★", "☆", "🎧", "🔥", "♪", "❤", "✯", "🎤"]):
+        return
+
+    if text in learned_party:
+        return
+
+    learned_party.append(text)
+
+    if len(learned_party) > 20:
+        learned_party.pop(0)
+# 🔥 ====== КІНЕЦЬ ДОДАНО ======
+
+
 # =========================
 # 🧠 GLOBAL STATE
 # =========================
@@ -161,6 +208,22 @@ def reaction_reply(msg):
 
     reactions = {
 
+        # 🔥 ДОДАНО
+        "привіт": ["привіт 😏", "о привіт 👀"],
+        "привет": ["привет 😏", "о привет 👀"],
+        "hallo": ["hallo 😏", "hey 👀"],
+        "лабас": ["лабас 😏"],
+
+        "доброго вечора": ["доброго вечора 😏"],
+        "добрый вечер": ["добрый вечер 😏"],
+
+        "всем пока": ["давай 😉"],
+        "досвидания": ["ще побачимось 😉"],
+        "добраніч": ["солодких снів 🌙"],
+        "до зустрічі": ["ще побачимось 😏"],
+        "тихої та спокійної ночі": ["взаємно 😌"],
+        # 🔥 КІНЕЦЬ ДОДАНО
+
         "дура": [
             "сама ти бешкетниця 😏",
             "зате весела 😌",
@@ -262,6 +325,7 @@ class LunaBrain:
     def reply(self, user, msg):
 
         global session_lang
+        global chat_counter  # 🔥 ДОДАНО
 
         msg_l = msg.lower()
 
@@ -284,10 +348,27 @@ class LunaBrain:
 
         remember_people(msg)
 
+        # 🔥 ДОДАНО (реакція без луна)
         if not in_session(user):
+            react = reaction_reply(msg)
+            if react:
+                return react
             return ""
 
         update_activity()
+
+        # 🔥 ДОДАНО
+        learn_party(msg)
+
+        chat_counter += 1
+
+        if chat_counter > 6:
+            chat_counter = 0
+            if random.random() < 0.25:
+                if learned_party and random.random() < 0.5:
+                    return random.choice(learned_party)
+                return random.choice(party_lines)
+        # 🔥 КІНЕЦЬ
 
         learn_from_chat(user, msg)
 

@@ -108,9 +108,34 @@ def get_random_memory():
 
     # 🔥 НЕ просто random — інколи останні спогади важливіші
     if random.random() < 0.3 and len(clean) > 5:
-        return clean[-1]  # останній досвід
+        return clean[-1]
 
     return random.choice(clean)
+
+
+# =========================
+# 🧠 НОВЕ: MEMORY З НІКОМ
+# =========================
+
+def get_memory_with_user():
+
+    try:
+        with open(MEM_FILE, "r", encoding="utf-8") as f:
+            lines = [x.strip() for x in f if x.strip()]
+    except:
+        return None, None
+
+    if not lines:
+        return None, None
+
+    line = random.choice(lines)
+
+    if "]" in line:
+        user = line.split("]", 1)[0].replace("[", "").strip()
+        text = line.split("]", 1)[1].strip()
+        return user, text
+
+    return None, line
 
 
 # =========================

@@ -2,8 +2,14 @@ from flask import Flask, request, Response
 import json
 
 from luna_brain import luna, check_idle
+from luna_time import start_live_mode  # 🔥 ДОДАНО
 
 app = Flask(__name__)
+
+# 🔥 ФУНКЦІЯ ВІДПРАВКИ В ЧАТ (ДОДАНО)
+def send_message_to_chat(msg):
+    print("Luna LIVE:", msg)
+
 
 @app.route("/")
 def home():
@@ -40,4 +46,8 @@ def chat():
 
 if __name__ == "__main__":
     print("🔥 Luna ONLINE")
+
+    # 🔥 ЗАПУСК LIVE РЕЖИМУ (ДОДАНО)
+    start_live_mode(send_message_to_chat)
+
     app.run(host="0.0.0.0", port=10000)

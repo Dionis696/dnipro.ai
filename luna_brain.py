@@ -31,7 +31,23 @@ party_trigger_count = 0
 last_party_time = 0
 
 
+# 🔥 CLEAN NAME (FIX Resident)
+def clean_username(name):
+
+    bad_words = ["resident", "guest", "user"]
+
+    words = name.split()
+
+    clean = [w for w in words if w.lower() not in bad_words]
+
+    if not clean:
+        return name
+
+    return clean[0]
+
+
 def learn_party(msg):
+
     global learned_party
 
     text = msg.strip()
@@ -332,7 +348,7 @@ class LunaBrain:
             if memory_raw and "]" in memory_raw:
                 memory = memory_raw.split("]", 1)[1].strip()
 
-            # 🔥 ЗГАДКА ГРАВЦЯ (ВИПРАВЛЕНО)
+            # 🔥 ЗГАДКА ГРАВЦЯ
             if random.random() < 0.25:
                 mem_user, mem_text = get_memory_with_user()
 
@@ -365,8 +381,10 @@ class LunaBrain:
         if not response:
             response = random.choice(pool)
 
+        clean_user = clean_username(user)
+
         if random.random() < 0.6:
-            response = f"{user} 😏 {response}"
+            response = f"{clean_user} 😏 {response}"
 
         return response
 

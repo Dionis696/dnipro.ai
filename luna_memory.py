@@ -75,10 +75,14 @@ def learn_from_chat(user, message):
 
 
 # =========================
-# 🎯 SMART MEMORY PICK
+# 🎯 SMART MEMORY PICK (АНТИ-ПОВТОРИ)
 # =========================
 
+last_memories = []
+
 def get_random_memory():
+
+    global last_memories
 
     try:
         with open(MEM_FILE, "r", encoding="utf-8") as f:
@@ -98,7 +102,7 @@ def get_random_memory():
         else:
             text = x.strip()
 
-        if len(text) < 3:
+        if len(text) < 5:
             continue
 
         clean.append(text)
@@ -106,11 +110,20 @@ def get_random_memory():
     if not clean:
         return ""
 
-    # 🔥 інколи бере останнє
-    if random.random() < 0.3 and len(clean) > 5:
-        return clean[-1]
+    # 🔥 НЕ повторюємо одне і те саме
+    pool = [x for x in clean if x not in last_memories]
 
-    return random.choice(clean)
+    if not pool:
+        pool = clean
+
+    result = random.choice(pool)
+
+    last_memories.append(result)
+
+    if len(last_memories) > 15:
+        last_memories.pop(0)
+
+    return result
 
 
 # =========================

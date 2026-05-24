@@ -3,7 +3,7 @@ import random
 # 🧠 cache останніх відповідей
 last_responses = []
 
-MAX_CACHE = 10
+MAX_CACHE = 15
 
 
 def pick_response(book, memory, msg):
@@ -18,7 +18,7 @@ def pick_response(book, memory, msg):
 
     choices = []
 
-    # 📚 BOOK PRIORITY
+    # 📚 BOOK PRIORITY (живі фрази)
     for b in book:
 
         low = b.lower()
@@ -31,16 +31,15 @@ def pick_response(book, memory, msg):
         if low in last_responses:
             continue
 
-        # ⭐ keyword boost
-        score = 2
+        score = 3  # 🔥 підсилюємо книгу
 
         if any(word in low for word in msg.split()):
             score += 3
 
-        for i in range(score):
+        for _ in range(score):
             choices.append(b)
 
-    # 🧠 MEMORY
+    # 🧠 MEMORY (трохи рідше)
     for m in memory:
 
         low = m.lower()
@@ -51,25 +50,34 @@ def pick_response(book, memory, msg):
         if low in last_responses:
             continue
 
-        score = 1
+        score = 2
 
         if any(word in low for word in msg.split()):
             score += 2
 
-        for i in range(score):
+        for _ in range(score):
             choices.append(m)
 
-    # ❌ nothing found
+    # ❌ якщо нічого нема → беремо з BOOK напряму
     if not choices:
-        return "Хмм... навіть не знаю що сказати 😄"
 
-    # 🎲 random smart pick
-    response = random.choice(choices)
+        fallback = []
 
-    # 💾 save cache
+        fallback.extend(book)
+        fallback.extend(memory)
+
+        if not fallback:
+            return "щось ти мене загнав 😏"
+
+        response = random.choice(fallback)
+
+    else:
+        # 🎲 smart random
+        response = random.choice(choices)
+
+    # 💾 cache
     last_responses.append(response.lower())
 
-    # limit cache
     if len(last_responses) > MAX_CACHE:
         last_responses.pop(0)
 

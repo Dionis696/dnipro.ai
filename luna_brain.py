@@ -348,19 +348,22 @@ class LunaBrain:
             if memory_raw and "]" in memory_raw:
                 memory = memory_raw.split("]", 1)[1].strip()
 
-            # 🔥 ЗГАДКА ГРАВЦЯ
+            # 🔥 ЗГАДКА ГРАВЦЯ (з чистим ніком)
             if random.random() < 0.25:
                 mem_user, mem_text = get_memory_with_user()
 
                 if mem_user and mem_text:
-                    if mem_user.lower() != user.lower():
+
+                    clean_mem_user = clean_username(mem_user)
+
+                    if clean_mem_user.lower() != clean_username(user).lower():
 
                         variants = [
-                            f"{mem_user} 😏 ти ж казав що {mem_text} — ще так?",
-                            f"{mem_user} 👀 ти серйозно це писав: {mem_text}?",
-                            f"{mem_user} 😏 пам’ятаю ти казав: {mem_text}",
-                            f"{mem_user} 😌 а ти досі так думаєш: {mem_text}?",
-                            f"{mem_user} 🔥 ти це тоді зарядив: {mem_text}"
+                            f"{clean_mem_user} 😏 ти ж казав що {mem_text} — ще так?",
+                            f"{clean_mem_user} 👀 ти серйозно це писав: {mem_text}?",
+                            f"{clean_mem_user} 😏 пам’ятаю ти казав: {mem_text}",
+                            f"{clean_mem_user} 😌 а ти досі так думаєш: {mem_text}?",
+                            f"{clean_mem_user} 🔥 ти це тоді зарядив: {mem_text}"
                         ]
 
                         return random.choice(variants)

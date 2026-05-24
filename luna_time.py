@@ -10,8 +10,8 @@ KYIV_TZ = pytz.timezone("Europe/Kyiv")
 last_time_talk = 0
 
 # 🔥 інтервал (60–80 хв)
-MIN_DELAY = 3600      # 60 хв
-MAX_DELAY = 4800      # 80 хв
+MIN_DELAY = 3600
+MAX_DELAY = 4800
 
 next_trigger = time.time() + random.randint(MIN_DELAY, MAX_DELAY)
 
@@ -27,7 +27,7 @@ def get_now():
     hour = now.hour
     minute = now.minute
 
-    weekday = now.weekday()  # 0 = понеділок
+    weekday = now.weekday()
 
     return hour, minute, weekday
 
@@ -80,7 +80,6 @@ def build_time_phrase():
 
     time_str = f"{hour:02d}:{minute:02d}"
 
-    # 🔥 варіанти по періоду
     if period == "morning":
         variants = [
             f"☀️ {time_str}… ви взагалі спите? 😄",
@@ -102,7 +101,7 @@ def build_time_phrase():
             f"🌆 {time_str}… танцпол чекає 💃"
         ]
 
-    else:  # night
+    else:
         variants = [
             f"🌙 {time_str}… ніч тільки почалась 😏",
             f"{time_str}… і ти ще тут… мені це подобається 👀",
@@ -123,17 +122,14 @@ def should_talk_time():
     now = time.time()
 
     if now >= next_trigger:
-
-        # 🔁 новий таймер
         next_trigger = now + random.randint(MIN_DELAY, MAX_DELAY)
-
         return True
 
     return False
 
 
 # =========================
-# 🚀 ГОЛОВНА ФУНКЦІЯ
+# 🚀 ГОЛОВНА ФУНКЦІЯ (твоя)
 # =========================
 
 def get_time_message():
@@ -142,3 +138,19 @@ def get_time_message():
         return build_time_phrase()
 
     return None
+
+
+# =========================
+# ✅ ДОДАНО ДЛЯ LUNA_BRAIN
+# =========================
+
+def get_time_data():
+
+    hour, minute, weekday = get_now()
+
+    return {
+        "hour": hour,
+        "minute": minute,
+        "time": f"{hour:02d}:{minute:02d}",
+        "day": get_day_name(weekday)
+    }

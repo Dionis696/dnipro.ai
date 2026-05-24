@@ -27,13 +27,11 @@ party_lines = [
 chat_counter = 0
 learned_party = []
 
-# 🔥 НОВЕ
 party_trigger_count = 0
 last_party_time = 0
 
 
 def learn_party(msg):
-
     global learned_party
 
     text = msg.strip()
@@ -76,7 +74,6 @@ club_djs = []
 # =========================
 
 def trigger_stop():
-
     global stop_until
     global active_session_user
     global session_until
@@ -96,7 +93,6 @@ def can_talk():
 # =========================
 
 def open_session(user, lang):
-
     global active_session_user
     global session_until
     global session_lang
@@ -111,7 +107,6 @@ def in_session(user):
 
 
 def session_tick():
-
     global active_session_user
     global session_until
 
@@ -171,7 +166,6 @@ def remember_people(msg):
     text = msg.lower()
 
     if "овнер" in text or "owner" in text:
-
         words = msg.split()
         if len(words) >= 2:
             name = words[-1]
@@ -179,7 +173,6 @@ def remember_people(msg):
                 club_owners.append(name)
 
     if "діджей" in text or "dj" in text:
-
         words = msg.split()
         if len(words) >= 2:
             name = words[-1]
@@ -339,16 +332,22 @@ class LunaBrain:
             if memory_raw and "]" in memory_raw:
                 memory = memory_raw.split("]", 1)[1].strip()
 
-            # 🔥 ІНОДІ ЗГАДУЄ КОГОСЬ ІЗ ЧАТУ
+            # 🔥 ЗГАДКА ГРАВЦЯ (ВИПРАВЛЕНО)
             if random.random() < 0.25:
-
                 mem_user, mem_text = get_memory_with_user()
 
                 if mem_user and mem_text:
-
                     if mem_user.lower() != user.lower():
 
-                        return f"{mem_user} 😏 казав що {mem_text}"
+                        variants = [
+                            f"{mem_user} 😏 ти ж казав що {mem_text} — ще так?",
+                            f"{mem_user} 👀 ти серйозно це писав: {mem_text}?",
+                            f"{mem_user} 😏 пам’ятаю ти казав: {mem_text}",
+                            f"{mem_user} 😌 а ти досі так думаєш: {mem_text}?",
+                            f"{mem_user} 🔥 ти це тоді зарядив: {mem_text}"
+                        ]
+
+                        return random.choice(variants)
 
         pool = []
 

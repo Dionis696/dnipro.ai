@@ -90,6 +90,7 @@ club_djs = []
 # =========================
 
 def trigger_stop():
+
     global stop_until
     global active_session_user
     global session_until
@@ -109,6 +110,7 @@ def can_talk():
 # =========================
 
 def open_session(user, lang):
+
     global active_session_user
     global session_until
     global session_lang
@@ -123,6 +125,7 @@ def in_session(user):
 
 
 def session_tick():
+
     global active_session_user
     global session_until
 
@@ -136,6 +139,7 @@ def session_tick():
 # =========================
 
 def update_activity():
+
     global last_activity_time
     last_activity_time = time.time()
 
@@ -182,16 +186,24 @@ def remember_people(msg):
     text = msg.lower()
 
     if "овнер" in text or "owner" in text:
+
         words = msg.split()
+
         if len(words) >= 2:
+
             name = words[-1]
+
             if name not in club_owners:
                 club_owners.append(name)
 
     if "діджей" in text or "dj" in text:
+
         words = msg.split()
+
         if len(words) >= 2:
+
             name = words[-1]
+
             if name not in club_djs:
                 club_djs.append(name)
 
@@ -205,8 +217,16 @@ def reaction_reply(msg):
     text = msg.lower()
 
     reactions = {
-        "привіт": ["привіт 😏", "о привіт 👀"],
-        "привет": ["привет 😏", "о привет 👀"],
+
+        "привіт": [
+            "привіт 😏",
+            "о привіт 👀"
+        ],
+
+        "привет": [
+            "привет 😏",
+            "о привет 👀"
+        ],
 
         "дура": [
             "сама ти бешкетниця 😏",
@@ -217,10 +237,17 @@ def reaction_reply(msg):
         "ніч": [
             "ніч тільки розігрівається 🌙",
             "вночі тут інший світ 😌"
+        ],
+
+        "ааа": [
+            "не кричи 😄",
+            "шо сталося 😏",
+            "ти мене лякаєш 😂"
         ]
     }
 
     for key in reactions:
+
         if key in text:
             return random.choice(reactions[key])
 
@@ -236,8 +263,10 @@ def load_book(lang):
     filename = f"luna_book_{lang}.txt"
 
     try:
+
         with open(filename, "r", encoding="utf-8") as f:
             return [x.strip() for x in f if x.strip()]
+
     except:
         return []
 
@@ -289,6 +318,7 @@ class LunaBrain:
         session_tick()
 
         if "луна" in msg_l or "luna" in msg_l:
+
             detected_lang = self.detect_lang(msg)
             open_session(user, detected_lang)
 
@@ -301,6 +331,7 @@ class LunaBrain:
         )
 
         if is_party:
+
             learn_party(msg)
             party_trigger_count += 1
 
@@ -340,6 +371,7 @@ class LunaBrain:
                 react = None
 
             else:
+
                 self.last_responses.append(react)
 
                 if len(self.last_responses) > 8:
@@ -401,7 +433,21 @@ class LunaBrain:
             pool.append(memory)
 
         if not pool:
-            return "я тебе чую 😏"
+
+            fallback = [
+                "ти мене перевіряєш? 😏",
+                "хмм... цікаво 👀",
+                "ну ти й загадковий 😄",
+                "тааа... навіть не знаю шо сказати 😅",
+                "я ще думаю над цим 🤔",
+                "ого 😏",
+                "ммм... інтригує 😎",
+                "ну і ситуація 😂",
+                "ти сьогодні в ударі 😄",
+                "ахах, оце ти видав 😆"
+            ]
+
+            return random.choice(fallback)
 
         response = pick_response(pool, [], msg)
 
@@ -410,6 +456,7 @@ class LunaBrain:
 
         # 🔥 підстановка ніку
         clean_user = clean_username(user)
+
         response = response.replace("{user}", clean_user)
 
         if random.random() < 0.6:

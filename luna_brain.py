@@ -5,6 +5,7 @@ import time
 from luna_memory import learn_from_chat, get_random_memory, get_memory_with_user
 from luna_mixer import pick_response
 from luna_time import get_time_data  # ✅ ДОДАНО
+from luna_time import get_time_message  # ✅ ДОДАНО
 
 
 party_lines = [
@@ -268,6 +269,11 @@ class LunaBrain:
             return ""
 
         session_tick()
+
+        # 🔥 TIME SYSTEM (ДОДАНО)
+        time_msg = get_time_message()
+        if time_msg:
+            return time_msg
 
         if "луна" in msg_l or "luna" in msg_l:
             detected_lang = self.detect_lang(msg)

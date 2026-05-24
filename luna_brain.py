@@ -2,7 +2,7 @@ import random
 import re
 import time
 
-from luna_memory import learn_from_chat, get_random_memory
+from luna_memory import learn_from_chat, get_random_memory, get_memory_with_user
 from luna_mixer import pick_response
 
 
@@ -27,35 +27,24 @@ party_lines = [
 chat_counter = 0
 learned_party = []
 
+# 🔥 НОВЕ
 party_trigger_count = 0
 last_party_time = 0
 
-# 🧠 НОВЕ
-known_users = {}
-chat_users = []
-last_auto_action = 0
-
 
 def learn_party(msg):
+
     global learned_party
 
     text = msg.strip()
 
-    if len(text) < 8:
+    if len(text) < 40:
         return
 
     if len(text) > 400:
         return
 
-    party_words = [
-        "dj","діджей","music","party","pump","bravo",
-        "wooo","yaaa","🔥","🎧","♪","❤","✯","🎤","donate","донат"
-    ]
-
-    if not (
-        any(sym in text for sym in ["★","☆","🎧","🔥","♪","❤","✯","🎤"])
-        or any(word in text.lower() for word in party_words)
-    ):
+    if not any(sym in text for sym in ["★", "☆", "🎧", "🔥", "♪", "❤", "✯", "🎤"]):
         return
 
     if text in learned_party:
@@ -63,7 +52,7 @@ def learn_party(msg):
 
     learned_party.append(text)
 
-    if len(learned_party) > 30:
+    if len(learned_party) > 20:
         learned_party.pop(0)
 
 
@@ -87,9 +76,13 @@ club_djs = []
 # =========================
 
 def trigger_stop():
-    global stop_until, active_session_user, session_until
+
+    global stop_until
+    global active_session_user
+    global session_until
 
     stop_until = time.time() + 600
+
     active_session_user = None
     session_until = 0
 
@@ -103,7 +96,10 @@ def can_talk():
 # =========================
 
 def open_session(user, lang):
-    global active_session_user, session_until, session_lang
+
+    global active_session_user
+    global session_until
+    global session_lang
 
     active_session_user = user
     session_until = time.time() + 60
@@ -111,14 +107,13 @@ def open_session(user, lang):
 
 
 def in_session(user):
-    return (
-        active_session_user == user and
-        time.time() < session_until
-    )
+    return active_session_user == user and time.time() < session_until
 
 
 def session_tick():
-    global active_session_user, session_until
+
+    global active_session_user
+    global session_until
 
     if time.time() > session_until:
         active_session_user = None
@@ -139,9 +134,11 @@ def update_activity():
 # =========================
 
 def check_idle():
+
     global last_activity_time
 
     if time.time() - last_activity_time > 600:
+
         update_activity()
 
         memory = get_random_memory()
@@ -167,11 +164,14 @@ def check_idle():
 # =========================
 
 def remember_people(msg):
-    global club_owners, club_djs
+
+    global club_owners
+    global club_djs
 
     text = msg.lower()
 
     if "овнер" in text or "owner" in text:
+
         words = msg.split()
         if len(words) >= 2:
             name = words[-1]
@@ -179,6 +179,7 @@ def remember_people(msg):
                 club_owners.append(name)
 
     if "діджей" in text or "dj" in text:
+
         words = msg.split()
         if len(words) >= 2:
             name = words[-1]
@@ -187,40 +188,31 @@ def remember_people(msg):
 
 
 # =========================
-# 😂 REACTIONS (АНТИ-СПАМ)
+# 😂 REACTIONS
 # =========================
 
-last_react_time = {}
-
-def reaction_reply(user, msg):
-    global last_react_time
+def reaction_reply(msg):
 
     text = msg.lower()
-
-    # ⛔ анти-спам 30 сек на юзера
-    if user in last_react_time:
-        if time.time() - last_react_time[user] < 30:
-            return None
 
     reactions = {
         "привіт": ["привіт 😏", "о привіт 👀"],
         "привет": ["привет 😏", "о привет 👀"],
-        "hallo": ["hallo 😏", "hey 👀"],
-        "лабас": ["лабас 😏"],
 
-        "доброго вечора": ["доброго вечора 😏"],
-        "добрый вечер": ["добрый вечер 😏"],
+        "дура": [
+            "сама ти бешкетниця 😏",
+            "зате весела 😌",
+            "ой все 😎"
+        ],
 
-        "всем пока": ["давай 😉"],
-        "досвидания": ["ще побачимось 😉"],
-        "добраніч": ["солодких снів 🌙"],
-        "до зустрічі": ["ще побачимось 😏"],
-        "тихої та спокійної ночі": ["взаємно 😌"],
+        "ніч": [
+            "ніч тільки розігрівається 🌙",
+            "вночі тут інший світ 😌"
+        ]
     }
 
     for key in reactions:
         if key in text:
-            last_react_time[user] = time.time()
             return random.choice(reactions[key])
 
     return None
@@ -231,6 +223,7 @@ def reaction_reply(user, msg):
 # =========================
 
 def load_book(lang):
+
     filename = f"luna_book_{lang}.txt"
 
     try:
@@ -250,6 +243,7 @@ class LunaBrain:
         self.last_responses = []
 
     def detect_lang(self, text):
+
         text = text.lower()
 
         ua = len(re.findall(r"[іїєґ]", text))
@@ -271,18 +265,9 @@ class LunaBrain:
         global chat_counter
         global party_trigger_count
         global last_party_time
-        global known_users, chat_users, last_auto_action
 
         msg_l = msg.lower()
 
-        # 🧠 запам’ятовуємо юзерів
-        known_users[user] = known_users.get(user, 0) + 1
-        if user not in chat_users:
-            chat_users.append(user)
-            if len(chat_users) > 30:
-                chat_users.pop(0)
-
-        # 🔴 STOP
         if re.search(r"\bstop\b", msg_l) or "луна стоп" in msg_l:
             trigger_stop()
             return "окей… мовчу 😌"
@@ -292,34 +277,16 @@ class LunaBrain:
 
         session_tick()
 
-        # 🟢 авто-життя (без луна)
-        chat_counter += 1
+        if "луна" in msg_l or "luna" in msg_l:
+            detected_lang = self.detect_lang(msg)
+            open_session(user, detected_lang)
 
-        if chat_counter >= 20:
-            chat_counter = 0
+        remember_people(msg)
 
-            if time.time() - last_auto_action > 120:
-                last_auto_action = time.time()
-
-                if chat_users:
-                    target = random.choice(chat_users)
-
-                    if known_users.get(target, 0) < 3:
-                        return f"Луна 😏 привіт {target}, ти тут вперше?"
-
-                    actions = [
-                        f"Луна 😏 {target}, ти сьогодні у вайбі чи ще розганяєшся?",
-                        f"Луна 👀 {target}, ти чув цей трек чи я одна кайфую?",
-                        f"Луна 🎧 {target}, щось ти тихий сьогодні",
-                        f"Луна 😏 {target}, ти з нами чи десь літаєш?"
-                    ]
-
-                    return random.choice(actions)
-
-        # 🔥 КРИЧАЛКИ
+        # 🔥 PARTY
         is_party = (
             len(msg) > 40 and
-            any(sym in msg for sym in ["🎧","🔥","♪","★","☆","🎤"])
+            any(sym in msg for sym in ["🎧", "🔥", "♪", "★", "☆", "🎤"])
         )
 
         if is_party:
@@ -336,51 +303,74 @@ class LunaBrain:
 
                 return random.choice(party_lines)
 
-        # 🔥 реакція без "луна"
         if not in_session(user):
-            react = reaction_reply(user, msg)
+            react = reaction_reply(msg)
             if react:
                 return react
             return ""
 
         update_activity()
 
+        learn_party(msg)
+        chat_counter += 1
+
         learn_from_chat(user, msg)
 
-        react = reaction_reply(user, msg)
+        react = reaction_reply(msg)
         if react:
             return react
 
         lang = session_lang
         book = load_book(lang)
 
+        response_source = "book"
+        if random.random() > 0.6:
+            response_source = "memory"
+
+        book_pick = ""
+        memory = ""
+
+        if response_source == "book":
+            if book:
+                book_pick = random.choice(book)
+        else:
+            memory_raw = get_random_memory()
+
+            if memory_raw and "]" in memory_raw:
+                memory = memory_raw.split("]", 1)[1].strip()
+
+            # 🔥 ІНОДІ ЗГАДУЄ КОГОСЬ ІЗ ЧАТУ
+            if random.random() < 0.25:
+
+                mem_user, mem_text = get_memory_with_user()
+
+                if mem_user and mem_text:
+
+                    if mem_user.lower() != user.lower():
+
+                        return f"{mem_user} 😏 казав що {mem_text}"
+
         pool = []
 
-        if book:
-            pool.append(random.choice(book))
+        if book_pick:
+            pool.append(book_pick)
 
-        memory = get_random_memory()
-        if memory and "]" in memory:
-            memory = memory.split("]",1)[1].strip()
+        if memory:
             pool.append(memory)
 
         if not pool:
-            return "клуб живе 🎧"
+            return "я слухаю 😌"
 
         response = pick_response(pool, [], msg)
 
         if not response:
             response = random.choice(pool)
 
-        if random.random() < 0.5:
-            response = f"Луна 😏 {user}, {response}"
+        if random.random() < 0.6:
+            response = f"{user} 😏 {response}"
 
         return response
 
-
-# =========================
-# 🚀 INSTANCE
-# =========================
 
 luna = LunaBrain()
 

@@ -377,14 +377,16 @@ class LunaBrain:
             pool.append(memory)
 
         if not pool:
-            return "я слухаю 😌"
+    return "я тебе чую 😏"
 
-        response = pick_response(pool, [], msg)
+response = pick_response(pool, [], msg)
 
-        if not response:
-            response = random.choice(pool)
+if not response:
+    response = random.choice(pool)
 
-        clean_user = clean_username(user)
+# 🔥 підстановка ніку
+clean_user = clean_username(user)
+response = response.replace("{user}", clean_user)
 
         if random.random() < 0.6:
             response = f"{clean_user} 😏 {response}"

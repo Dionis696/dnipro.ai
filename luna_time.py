@@ -7,7 +7,7 @@ import pytz
 KYIV_TZ = pytz.timezone("Europe/Kyiv")
 
 # ⏱ анти-спам
-last_time_talk = 0
+last_time_talk = 0  
 
 # 🔥 інтервал (60–80 хв)
 MIN_DELAY = 10
@@ -154,3 +154,28 @@ def get_time_data():
         "time": f"{hour:02d}:{minute:02d}",
         "day": get_day_name(weekday)
     }
+
+
+# =========================
+# 🔥 LIVE РЕЖИМ (САМА ПИШЕ)
+# =========================
+
+def live_loop(send_func):
+
+    while True:
+
+        delay = random.randint(MIN_DELAY, MAX_DELAY)
+        time.sleep(delay)
+
+        msg = build_time_phrase()
+
+        if msg:
+            send_func(msg)
+
+
+def start_live_mode(send_func):
+    import threading
+
+    t = threading.Thread(target=live_loop, args=(send_func,))
+    t.daemon = True
+    t.start()

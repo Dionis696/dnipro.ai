@@ -6,7 +6,6 @@ from luna_memory import learn_from_chat, get_random_memory, get_memory_with_user
 from luna_mixer import pick_response
 
 
-# 🔥 ====== ДОДАНО (КРИЧАЛКИ) ======
 party_lines = [
     "🎧 IN THE MIX 🔥",
     "Dnipro Club на зв’язку 😎",
@@ -20,7 +19,7 @@ party_lines = [
     "~`\"Welcome to the Party!!\"~`",
     "Ласкаво просимо на вечірку!!",
     "ВСІМ ПОЗИТИВНОГО НАСТРОЮ",
-    "🤘 𝓓𝓝𝓘𝓟𝓡𝓞 🤘",
+    "🤘 𝓓𝓝𝓘𝓟𝓞 🤘",
     "🎤 МУЗИКУ НА ПОВНУ 🔥"
 ]
 
@@ -65,10 +64,6 @@ def learn_party(msg):
     if len(learned_party) > 20:
         learned_party.pop(0)
 
-
-# =========================
-# 🧠 GLOBAL STATE
-# =========================
 
 active_session_user = None
 session_until = 0
@@ -357,7 +352,6 @@ class LunaBrain:
 
             return random.choice(fallback)
 
-        # ✅ ВОТ ТУТ ПРАВКА
         memory_list = []
 
         if memory:
@@ -372,8 +366,10 @@ class LunaBrain:
 
         response = response.replace("{user}", clean_user)
 
-        if random.random() < 0.6:
-            response = f"{clean_user} 😏 {response}"
+        # ✅ ФІКС ДУБЛЮ НІКУ
+        if "{user}" not in response:
+            if random.random() < 0.6:
+                response = f"{clean_user} 😏 {response}"
 
         return response
 

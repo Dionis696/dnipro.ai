@@ -10,8 +10,8 @@ KYIV_TZ = pytz.timezone("Europe/Kyiv")
 last_time_talk = 0
 
 # 🔥 інтервал (60–80 хв)
-MIN_DELAY = 3600
-MAX_DELAY = 4800
+MIN_DELAY = 10
+MAX_DELAY = 20
 
 next_trigger = time.time() + random.randint(MIN_DELAY, MAX_DELAY)
 

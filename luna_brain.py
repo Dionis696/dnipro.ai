@@ -261,8 +261,10 @@ class LunaBrain:
 
         if ua > 0:
             return "ua"
+
         if ru > ua and ru > 0:
             return "ru"
+
         if en > 5:
             return "en"
 
@@ -303,7 +305,9 @@ class LunaBrain:
             party_trigger_count += 1
 
         if party_trigger_count >= 3:
+
             if time.time() - last_party_time > 600:
+
                 party_trigger_count = 0
                 last_party_time = time.time()
 
@@ -313,9 +317,12 @@ class LunaBrain:
                 return random.choice(party_lines)
 
         if not in_session(user):
+
             react = reaction_reply(msg)
+
             if react:
                 return react
+
             return ""
 
         update_activity()
@@ -326,6 +333,18 @@ class LunaBrain:
         learn_from_chat(user, msg)
 
         react = reaction_reply(msg)
+
+        if react:
+
+            if react in self.last_responses:
+                react = None
+
+            else:
+                self.last_responses.append(react)
+
+                if len(self.last_responses) > 8:
+                    self.last_responses.pop(0)
+
         if react:
             return react
 
@@ -333,6 +352,7 @@ class LunaBrain:
         book = load_book(lang)
 
         response_source = "book"
+
         if random.random() > 0.6:
             response_source = "memory"
 
@@ -340,16 +360,20 @@ class LunaBrain:
         memory = ""
 
         if response_source == "book":
+
             if book:
                 book_pick = random.choice(book)
+
         else:
+
             memory_raw = get_random_memory()
 
             if memory_raw and "]" in memory_raw:
                 memory = memory_raw.split("]", 1)[1].strip()
 
-            # 🔥 ЗГАДКА ГРАВЦЯ (з чистим ніком)
+            # 🔥 ЗГАДКА ГРАВЦЯ
             if random.random() < 0.25:
+
                 mem_user, mem_text = get_memory_with_user()
 
                 if mem_user and mem_text:
@@ -376,7 +400,7 @@ class LunaBrain:
         if memory:
             pool.append(memory)
 
-                if not pool:
+        if not pool:
             return "я тебе чую 😏"
 
         response = pick_response(pool, [], msg)
@@ -387,9 +411,6 @@ class LunaBrain:
         # 🔥 підстановка ніку
         clean_user = clean_username(user)
         response = response.replace("{user}", clean_user)
-# 🔥 підстановка ніку
-clean_user = clean_username(user)
-response = response.replace("{user}", clean_user)
 
         if random.random() < 0.6:
             response = f"{clean_user} 😏 {response}"

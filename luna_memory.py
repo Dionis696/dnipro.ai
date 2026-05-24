@@ -75,7 +75,7 @@ def learn_from_chat(user, message):
 
 
 # =========================
-# 🎯 SMART MEMORY PICK (ВАЖЛИВО)
+# 🎯 SMART MEMORY PICK
 # =========================
 
 def get_random_memory():
@@ -106,7 +106,7 @@ def get_random_memory():
     if not clean:
         return ""
 
-    # 🔥 НЕ просто random — інколи останні спогади важливіші
+    # 🔥 інколи бере останнє
     if random.random() < 0.3 and len(clean) > 5:
         return clean[-1]
 
@@ -114,7 +114,7 @@ def get_random_memory():
 
 
 # =========================
-# 🧠 НОВЕ: MEMORY З НІКОМ
+# 🧠 НОВЕ: MEMORY З НІКОМ (ВИПРАВЛЕНО)
 # =========================
 
 def get_memory_with_user():
@@ -128,14 +128,29 @@ def get_memory_with_user():
     if not lines:
         return None, None
 
-    line = random.choice(lines)
+    valid = []
 
-    if "]" in line:
-        user = line.split("]", 1)[0].replace("[", "").strip()
-        text = line.split("]", 1)[1].strip()
-        return user, text
+    for line in lines:
 
-    return None, line
+        if "]" in line:
+
+            user = line.split("]", 1)[0].replace("[", "").strip()
+
+            # 🔥 ІГНОРУЄМО [Memory]
+            if user.lower() == "memory":
+                continue
+
+            text = line.split("]", 1)[1].strip()
+
+            if len(text) < 3:
+                continue
+
+            valid.append((user, text))
+
+    if not valid:
+        return None, None
+
+    return random.choice(valid)
 
 
 # =========================

@@ -45,7 +45,7 @@ last_party_time = 0
 
 # 🔥 анти-спам авто
 last_auto_time = 0
-auto_cooldown = 40  # сек
+auto_cooldown = 40
 
 
 def clean_username(name):
@@ -255,15 +255,6 @@ class LunaBrain:
 
         session_tick()
 
-        # 🔥 AUTO TARGETING (ЖИВА ЛУНА)
-        if not in_session(user):
-            if time.time() - last_auto_time > auto_cooldown:
-                if random.random() < 0.07:
-                    last_auto_time = time.time()
-                    clean_user = clean_username(user)
-                    line = random.choice(auto_lines)
-                    return line.replace("{user}", clean_user)
-
         if "луна" in msg_l or "luna" in msg_l:
             detected_lang = self.detect_lang(msg)
             open_session(user, detected_lang)
@@ -289,10 +280,21 @@ class LunaBrain:
 
                 return random.choice(party_lines)
 
+        # ✅ FIXED BLOCK
         if not in_session(user):
+
             react = reaction_reply(msg)
             if react:
                 return react
+
+            # 🔥 AUTO TARGET ПІСЛЯ РЕАКЦІЇ
+            if time.time() - last_auto_time > auto_cooldown:
+                if random.random() < 0.07:
+                    last_auto_time = time.time()
+                    clean_user = clean_username(user)
+                    line = random.choice(auto_lines)
+                    return line.replace("{user}", clean_user)
+
             return ""
 
         update_activity()
@@ -392,9 +394,10 @@ class LunaBrain:
 
         clean_user = clean_username(user)
 
-        response = response.replace("{user}", clean_user)
-
-        if "{user}" not in response:
+        # ✅ FIX {user}
+        if "{user}" in response:
+            response = response.replace("{user}", clean_user)
+        else:
             if random.random() < 0.6:
                 response = f"{clean_user} 😏 {response}"
 

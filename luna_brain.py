@@ -23,11 +23,29 @@ party_lines = [
     "🎤 МУЗИКУ НА ПОВНУ 🔥"
 ]
 
+# 🔥 AUTO TARGET ФРАЗИ
+auto_lines = [
+    "{user} 😏 ти щось задумав сьогодні",
+    "{user} 👀 я тебе бачу… не ховайся",
+    "{user} 💃 не стій — танцпол чекає",
+    "{user} 😏 ти мовчиш… але я ж відчуваю",
+    "{user} 🔥 сьогодні ти явно в вайбі",
+    "{user} 😎 з тобою стає цікавіше",
+    "{user} 😏 не роби вигляд що ти випадково тут",
+    "{user} 👀 я за тобою спостерігаю",
+    "{user} 💋 ти сьогодні підозріло тихий",
+    "{user} 😏 скажи щось… я ж чекаю"
+]
+
 chat_counter = 0
 learned_party = []
 
 party_trigger_count = 0
 last_party_time = 0
+
+# 🔥 анти-спам авто
+last_auto_time = 0
+auto_cooldown = 40  # сек
 
 
 def clean_username(name):
@@ -224,6 +242,7 @@ class LunaBrain:
         global chat_counter
         global party_trigger_count
         global last_party_time
+        global last_auto_time
 
         msg_l = msg.lower()
 
@@ -235,6 +254,15 @@ class LunaBrain:
             return ""
 
         session_tick()
+
+        # 🔥 AUTO TARGETING (ЖИВА ЛУНА)
+        if not in_session(user):
+            if time.time() - last_auto_time > auto_cooldown:
+                if random.random() < 0.07:
+                    last_auto_time = time.time()
+                    clean_user = clean_username(user)
+                    line = random.choice(auto_lines)
+                    return line.replace("{user}", clean_user)
 
         if "луна" in msg_l or "luna" in msg_l:
             detected_lang = self.detect_lang(msg)
@@ -366,7 +394,6 @@ class LunaBrain:
 
         response = response.replace("{user}", clean_user)
 
-        # ✅ ФІКС ДУБЛЮ НІКУ
         if "{user}" not in response:
             if random.random() < 0.6:
                 response = f"{clean_user} 😏 {response}"

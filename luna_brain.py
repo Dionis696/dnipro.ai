@@ -4,6 +4,7 @@ import time
 
 from luna_memory import learn_from_chat, get_random_memory, get_memory_with_user
 from luna_mixer import pick_response
+from luna_time import get_time_data  # ✅ ДОДАНО
 
 
 party_lines = [
@@ -37,6 +38,15 @@ auto_lines = [
     "{user} 😏 скажи щось… я ж чекаю"
 ]
 
+# 🕒 ФРАЗИ З ЧАСОМ
+time_lines = [
+    "а ви в курсі що зараз {day} 👀 і вже {time}… ніч тільки починається 😏",
+    "зараз {time} 😏 саме час для двіжу",
+    "сьогодні {day} 😎 і атмосфера вже інша",
+    "ммм… {time} 👀 і тут стає цікавіше",
+    "на годиннику {time} 🔥 саме те шо треба для туси"
+]
+
 chat_counter = 0
 learned_party = []
 
@@ -46,6 +56,9 @@ last_party_time = 0
 # 🔥 анти-спам авто
 last_auto_time = 0
 auto_cooldown = 40
+
+# 🕒 анти-спам часу (60–80 хв)
+last_time_event = 0
 
 
 def clean_username(name):
@@ -243,6 +256,7 @@ class LunaBrain:
         global party_trigger_count
         global last_party_time
         global last_auto_time
+        global last_time_event
 
         msg_l = msg.lower()
 
@@ -280,20 +294,28 @@ class LunaBrain:
 
                 return random.choice(party_lines)
 
-        # ✅ FIXED BLOCK
+        # ✅ BLOCK
         if not in_session(user):
 
             react = reaction_reply(msg)
             if react:
                 return react
 
-            # 🔥 AUTO TARGET ПІСЛЯ РЕАКЦІЇ
+            # 🔥 AUTO TARGET
             if time.time() - last_auto_time > auto_cooldown:
                 if random.random() < 0.07:
                     last_auto_time = time.time()
                     clean_user = clean_username(user)
                     line = random.choice(auto_lines)
                     return line.replace("{user}", clean_user)
+
+            # 🕒 ЖИВИЙ ЧАС
+            if time.time() - last_time_event > random.randint(3600, 4800):
+                if random.random() < 0.5:
+                    last_time_event = time.time()
+                    t = get_time_data()
+                    line = random.choice(time_lines)
+                    return line.format(**t)
 
             return ""
 
@@ -394,7 +416,6 @@ class LunaBrain:
 
         clean_user = clean_username(user)
 
-        # ✅ FIX {user}
         if "{user}" in response:
             response = response.replace("{user}", clean_user)
         else:

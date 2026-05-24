@@ -31,13 +31,9 @@ party_trigger_count = 0
 last_party_time = 0
 
 
-# 🔥 CLEAN NAME (FIX Resident)
 def clean_username(name):
-
     bad_words = ["resident", "guest", "user"]
-
     words = name.split()
-
     clean = [w for w in words if w.lower() not in bad_words]
 
     if not clean:
@@ -85,18 +81,12 @@ club_owners = []
 club_djs = []
 
 
-# =========================
-# 🔴 STOP SYSTEM
-# =========================
-
 def trigger_stop():
-
     global stop_until
     global active_session_user
     global session_until
 
     stop_until = time.time() + 600
-
     active_session_user = None
     session_until = 0
 
@@ -105,12 +95,7 @@ def can_talk():
     return time.time() >= stop_until
 
 
-# =========================
-# 🟢 SESSION
-# =========================
-
 def open_session(user, lang):
-
     global active_session_user
     global session_until
     global session_lang
@@ -125,7 +110,6 @@ def in_session(user):
 
 
 def session_tick():
-
     global active_session_user
     global session_until
 
@@ -134,19 +118,10 @@ def session_tick():
         session_until = 0
 
 
-# =========================
-# 🟡 ACTIVITY
-# =========================
-
 def update_activity():
-
     global last_activity_time
     last_activity_time = time.time()
 
-
-# =========================
-# 🌙 IDLE MODE
-# =========================
 
 def check_idle():
 
@@ -174,10 +149,6 @@ def check_idle():
     return None
 
 
-# =========================
-# 👑 OWNER / DJ MEMORY
-# =========================
-
 def remember_people(msg):
 
     global club_owners
@@ -186,94 +157,49 @@ def remember_people(msg):
     text = msg.lower()
 
     if "овнер" in text or "owner" in text:
-
         words = msg.split()
-
         if len(words) >= 2:
-
             name = words[-1]
-
             if name not in club_owners:
                 club_owners.append(name)
 
     if "діджей" in text or "dj" in text:
-
         words = msg.split()
-
         if len(words) >= 2:
-
             name = words[-1]
-
             if name not in club_djs:
                 club_djs.append(name)
 
-
-# =========================
-# 😂 REACTIONS
-# =========================
 
 def reaction_reply(msg):
 
     text = msg.lower()
 
     reactions = {
-
-        "привіт": [
-            "привіт 😏",
-            "о привіт 👀"
-        ],
-
-        "привет": [
-            "привет 😏",
-            "о привет 👀"
-        ],
-
-        "дура": [
-            "сама ти бешкетниця 😏",
-            "зате весела 😌",
-            "ой все 😎"
-        ],
-
-        "ніч": [
-            "ніч тільки розігрівається 🌙",
-            "вночі тут інший світ 😌"
-        ],
-
-        "ааа": [
-            "не кричи 😄",
-            "шо сталося 😏",
-            "ти мене лякаєш 😂"
-        ]
+        "привіт": ["привіт 😏", "о привіт 👀"],
+        "привет": ["привет 😏", "о привет 👀"],
+        "дура": ["сама ти бешкетниця 😏", "зате весела 😌", "ой все 😎"],
+        "ніч": ["ніч тільки розігрівається 🌙", "вночі тут інший світ 😌"],
+        "ааа": ["не кричи 😄", "шо сталося 😏", "ти мене лякаєш 😂"]
     }
 
     for key in reactions:
-
         if key in text:
             return random.choice(reactions[key])
 
     return None
 
 
-# =========================
-# 📚 LOAD LANGUAGE BOOK
-# =========================
-
 def load_book(lang):
 
     filename = f"luna_book_{lang}.txt"
 
     try:
-
         with open(filename, "r", encoding="utf-8") as f:
             return [x.strip() for x in f if x.strip()]
-
     except:
         return []
 
-
-# =========================
-# 🎭 MAIN BRAIN
-# =========================
 
 class LunaBrain:
 
@@ -290,10 +216,8 @@ class LunaBrain:
 
         if ua > 0:
             return "ua"
-
         if ru > ua and ru > 0:
             return "ru"
-
         if en > 5:
             return "en"
 
@@ -318,27 +242,22 @@ class LunaBrain:
         session_tick()
 
         if "луна" in msg_l or "luna" in msg_l:
-
             detected_lang = self.detect_lang(msg)
             open_session(user, detected_lang)
 
         remember_people(msg)
 
-        # 🔥 PARTY
         is_party = (
             len(msg) > 40 and
             any(sym in msg for sym in ["🎧", "🔥", "♪", "★", "☆", "🎤"])
         )
 
         if is_party:
-
             learn_party(msg)
             party_trigger_count += 1
 
         if party_trigger_count >= 3:
-
             if time.time() - last_party_time > 600:
-
                 party_trigger_count = 0
                 last_party_time = time.time()
 
@@ -348,12 +267,9 @@ class LunaBrain:
                 return random.choice(party_lines)
 
         if not in_session(user):
-
             react = reaction_reply(msg)
-
             if react:
                 return react
-
             return ""
 
         update_activity()
@@ -366,14 +282,10 @@ class LunaBrain:
         react = reaction_reply(msg)
 
         if react:
-
             if react in self.last_responses:
                 react = None
-
             else:
-
                 self.last_responses.append(react)
-
                 if len(self.last_responses) > 8:
                     self.last_responses.pop(0)
 
@@ -392,20 +304,16 @@ class LunaBrain:
         memory = ""
 
         if response_source == "book":
-
             if book:
                 book_pick = random.choice(book)
 
         else:
-
             memory_raw = get_random_memory()
 
             if memory_raw and "]" in memory_raw:
                 memory = memory_raw.split("]", 1)[1].strip()
 
-            # 🔥 ЗГАДКА ГРАВЦЯ
             if random.random() < 0.25:
-
                 mem_user, mem_text = get_memory_with_user()
 
                 if mem_user and mem_text:
@@ -449,12 +357,17 @@ class LunaBrain:
 
             return random.choice(fallback)
 
-        response = pick_response(pool, [], msg)
+        # ✅ ВОТ ТУТ ПРАВКА
+        memory_list = []
+
+        if memory:
+            memory_list.append(memory)
+
+        response = pick_response(pool, memory_list, msg)
 
         if not response:
             response = random.choice(pool)
 
-        # 🔥 підстановка ніку
         clean_user = clean_username(user)
 
         response = response.replace("{user}", clean_user)

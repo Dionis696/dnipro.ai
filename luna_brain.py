@@ -4,8 +4,8 @@ import time
 
 from luna_memory import learn_from_chat, get_random_memory, get_memory_with_user
 from luna_mixer import pick_response
-from luna_time import get_time_data  # ✅ ДОДАНО
-from luna_time import get_time_message  # ✅ ДОДАНО
+from luna_time import get_time_data
+from luna_time import get_time_message
 
 
 party_lines = [
@@ -25,7 +25,6 @@ party_lines = [
     "🎤 МУЗИКУ НА ПОВНУ 🔥"
 ]
 
-# 🔥 AUTO TARGET ФРАЗИ
 auto_lines = [
     "{user} 😏 ти щось задумав сьогодні",
     "{user} 👀 я тебе бачу… не ховайся",
@@ -39,7 +38,6 @@ auto_lines = [
     "{user} 😏 скажи щось… я ж чекаю"
 ]
 
-# 🕒 ФРАЗИ З ЧАСОМ
 time_lines = [
     "а ви в курсі що зараз {day} 👀 і вже {time}… ніч тільки починається 😏",
     "зараз {time} 😏 саме час для двіжу",
@@ -54,11 +52,9 @@ learned_party = []
 party_trigger_count = 0
 last_party_time = 0
 
-# 🔥 анти-спам авто
 last_auto_time = 0
 auto_cooldown = 40
 
-# 🕒 анти-спам часу (60–80 хв)
 last_time_event = 0
 
 
@@ -74,7 +70,6 @@ def clean_username(name):
 
 
 def learn_party(msg):
-
     global learned_party
 
     text = msg.strip()
@@ -151,7 +146,6 @@ def update_activity():
 
 
 def check_idle():
-
     global last_activity_time
 
     if time.time() - last_activity_time > 600:
@@ -176,30 +170,7 @@ def check_idle():
     return None
 
 
-def remember_people(msg):
-
-    global club_owners
-    global club_djs
-
-    text = msg.lower()
-
-    if "овнер" in text or "owner" in text:
-        words = msg.split()
-        if len(words) >= 2:
-            name = words[-1]
-            if name not in club_owners:
-                club_owners.append(name)
-
-    if "діджей" in text or "dj" in text:
-        words = msg.split()
-        if len(words) >= 2:
-            name = words[-1]
-            if name not in club_djs:
-                club_djs.append(name)
-
-
 def reaction_reply(msg):
-
     text = msg.lower()
 
     reactions = {
@@ -217,24 +188,12 @@ def reaction_reply(msg):
     return None
 
 
-def load_book(lang):
-
-    filename = f"luna_book_{lang}.txt"
-
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            return [x.strip() for x in f if x.strip()]
-    except:
-        return []
-
-
 class LunaBrain:
 
     def __init__(self):
         self.last_responses = []
 
     def detect_lang(self, text):
-
         text = text.lower()
 
         ua = len(re.findall(r"[іїєґ]", text))
@@ -253,11 +212,7 @@ class LunaBrain:
     def reply(self, user, msg):
 
         global session_lang
-        global chat_counter
-        global party_trigger_count
-        global last_party_time
         global last_auto_time
-        global last_time_event
 
         msg_l = msg.lower()
 
@@ -270,166 +225,34 @@ class LunaBrain:
 
         session_tick()
 
-        # 🔥 TIME SYSTEM (ДОДАНО)
+        # ✅ TIME ТІЛЬКИ ЯК ФОНОВИЙ (НЕ ЛОМАЄ ЛОГІКУ)
         time_msg = get_time_message()
-        if time_msg:
-            return time_msg
 
-        if "луна" in msg_l or "luna" in msg_l:
-            detected_lang = self.detect_lang(msg)
-            open_session(user, detected_lang)
-
-        remember_people(msg)
-
-        is_party = (
-            len(msg) > 40 and
-            any(sym in msg for sym in ["🎧", "🔥", "♪", "★", "☆", "🎤"])
-        )
-
-        if is_party:
-            learn_party(msg)
-            party_trigger_count += 1
-
-        if party_trigger_count >= 3:
-            if time.time() - last_party_time > 600:
-                party_trigger_count = 0
-                last_party_time = time.time()
-
-                if learned_party and random.random() < 0.5:
-                    return random.choice(learned_party)
-
-                return random.choice(party_lines)
-
-        # ✅ BLOCK
         if not in_session(user):
 
             react = reaction_reply(msg)
             if react:
                 return react
 
-            # 🔥 AUTO TARGET
+            if time_msg:
+                return time_msg
+
             if time.time() - last_auto_time > auto_cooldown:
                 if random.random() < 0.07:
                     last_auto_time = time.time()
                     clean_user = clean_username(user)
-                    line = random.choice(auto_lines)
-                    return line.replace("{user}", clean_user)
-
-            # 🕒 ЖИВИЙ ЧАС
-            if time.time() - last_time_event > random.randint(3600, 4800):
-                if random.random() < 0.5:
-                    last_time_event = time.time()
-                    t = get_time_data()
-                    line = random.choice(time_lines)
-                    return line.format(**t)
+                    return random.choice(auto_lines).replace("{user}", clean_user)
 
             return ""
 
         update_activity()
 
-        learn_party(msg)
-        chat_counter += 1
-
-        learn_from_chat(user, msg)
-
         react = reaction_reply(msg)
-
-        if react:
-            if react in self.last_responses:
-                react = None
-            else:
-                self.last_responses.append(react)
-                if len(self.last_responses) > 8:
-                    self.last_responses.pop(0)
-
         if react:
             return react
 
-        lang = session_lang
-        book = load_book(lang)
-
-        response_source = "book"
-
-        if random.random() > 0.6:
-            response_source = "memory"
-
-        book_pick = ""
-        memory = ""
-
-        if response_source == "book":
-            if book:
-                book_pick = random.choice(book)
-
-        else:
-            memory_raw = get_random_memory()
-
-            if memory_raw and "]" in memory_raw:
-                memory = memory_raw.split("]", 1)[1].strip()
-
-            if random.random() < 0.25:
-                mem_user, mem_text = get_memory_with_user()
-
-                if mem_user and mem_text:
-
-                    clean_mem_user = clean_username(mem_user)
-
-                    if clean_mem_user.lower() != clean_username(user).lower():
-
-                        variants = [
-                            f"{clean_mem_user} 😏 ти ж казав що {mem_text} — ще так?",
-                            f"{clean_mem_user} 👀 ти серйозно це писав: {mem_text}?",
-                            f"{clean_mem_user} 😏 пам’ятаю ти казав: {mem_text}",
-                            f"{clean_mem_user} 😌 а ти досі так думаєш: {mem_text}?",
-                            f"{clean_mem_user} 🔥 ти це тоді зарядив: {mem_text}"
-                        ]
-
-                        return random.choice(variants)
-
-        pool = []
-
-        if book_pick:
-            pool.append(book_pick)
-
-        if memory:
-            pool.append(memory)
-
-        if not pool:
-
-            fallback = [
-                "ти мене перевіряєш? 😏",
-                "хмм... цікаво 👀",
-                "ну ти й загадковий 😄",
-                "тааа... навіть не знаю шо сказати 😅",
-                "я ще думаю над цим 🤔",
-                "ого 😏",
-                "ммм... інтригує 😎",
-                "ну і ситуація 😂",
-                "ти сьогодні в ударі 😄",
-                "ахах, оце ти видав 😆"
-            ]
-
-            return random.choice(fallback)
-
-        memory_list = []
-
-        if memory:
-            memory_list.append(memory)
-
-        response = pick_response(pool, memory_list, msg)
-
-        if not response:
-            response = random.choice(pool)
-
-        clean_user = clean_username(user)
-
-        if "{user}" in response:
-            response = response.replace("{user}", clean_user)
-        else:
-            if random.random() < 0.6:
-                response = f"{clean_user} 😏 {response}"
-
-        return response
-
+        return ""
+        
 
 luna = LunaBrain()
 

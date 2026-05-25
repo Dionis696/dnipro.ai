@@ -8,6 +8,15 @@ from luna_time import get_time_data
 from luna_time import get_time_message
 
 
+# 🔥 LIVE CONTROL
+last_live_time = 0
+LIVE_COOLDOWN_MIN = 180   # 3 хв
+LIVE_COOLDOWN_MAX = 360   # 6 хв
+next_live_delay = random.randint(LIVE_COOLDOWN_MIN, LIVE_COOLDOWN_MAX)
+
+chat_activity = 0
+
+
 party_lines = [
     "🎧 IN THE MIX 🔥",
     "Dnipro Club на зв’язку 😎",
@@ -16,18 +25,6 @@ party_lines = [
     "всім гарного настрою 😏"
 ]
 
-auto_lines = [
-    "{user} 😏 ти щось задумав сьогодні",
-    "{user} 👀 я тебе бачу… не ховайся",
-    "{user} 💃 не стій — танцпол чекає",
-    "{user} 🔥 сьогодні ти явно в вайбі",
-    "{user} 😎 з тобою стає цікавіше"
-]
-
-time_lines = [
-    "а ви в курсі що зараз {day} 👀 і вже {time}… ніч тільки починається 😏",
-    "зараз {time} 😏 саме час для двіжу"
-]
 
 last_auto_time = 0
 auto_cooldown = 60
@@ -42,6 +39,53 @@ def clean_username(name):
         return name
 
     return clean[0]
+
+
+# 🔥 LIVE ФРАЗА (МІКС MEMORY + BOOK)
+def build_live_phrase():
+
+    parts = []
+
+    # беремо 2-3 шматки
+    for _ in range(random.randint(2, 3)):
+        memory = get_random_memory()
+
+        if not memory:
+            continue
+
+        if "]" in memory:
+            memory = memory.split("]", 1)[1].strip()
+
+        # ❌ фільтр сміття
+        if len(memory) < 5:
+            continue
+
+        if any(x in memory.lower() for x in ["привіт", "hello", "зайшов"]):
+            continue
+
+        if re.search(r"[A-Z][a-z]+", memory):  # імена типу Asfarula
+            continue
+
+        parts.append(memory)
+
+    if not parts:
+        return None
+
+    base = random.choice(parts)
+
+    if len(parts) > 1:
+        extra = random.choice(parts)
+        if extra != base:
+            phrase = f"{base}… {extra}"
+        else:
+            phrase = base
+    else:
+        phrase = base
+
+    # емоція
+    emoji = random.choice(["😏", "👀", "🔥", "😌"])
+
+    return f"{phrase} {emoji}"
 
 
 active_session_user = None
@@ -92,13 +136,9 @@ def check_idle():
     if time.time() - last_activity_time > 600:
         update_activity()
 
-        memory = get_random_memory()
-
-        if memory and "]" in memory:
-            memory = memory.split("]", 1)[1].strip()
-
-        if memory:
-            return memory
+        phrase = build_live_phrase()
+        if phrase:
+            return phrase
 
         return random.choice([
             "ніч сьогодні дивна 🌙",
@@ -151,8 +191,13 @@ class LunaBrain:
     def reply(self, user, msg):
 
         global last_auto_time
+        global last_live_time
+        global next_live_delay
+        global chat_activity
 
         msg_l = msg.lower()
+
+        chat_activity += 1
 
         # 🔇 стоп
         if re.search(r"\bstop\b", msg_l) or "луна стоп" in msg_l:
@@ -164,27 +209,35 @@ class LunaBrain:
 
         session_tick()
 
-        # 🕒 ЧАС (працює стабільно)
+        # 🕒 час
         time_msg = get_time_message()
 
-        # ❗ НЕ В СЕСІЇ (просто чат)
+        # ❗ НЕ В СЕСІЇ
         if not in_session(user):
 
-            # реакції
+            # реакція
             react = reaction_reply(msg)
             if react:
                 return react
 
-            # час (інколи)
+            # час
             if time_msg:
                 return time_msg
 
-            # авто (дуже рідко)
-            if time.time() - last_auto_time > auto_cooldown:
-                if random.random() < 0.05:
-                    last_auto_time = time.time()
-                    clean_user = clean_username(user)
-                    return random.choice(auto_lines).replace("{user}", clean_user)
+            # 🔥 LIVE режим (головне)
+            now = time.time()
+
+            if now - last_live_time > next_live_delay:
+
+                if chat_activity > random.randint(5, 12):
+
+                    phrase = build_live_phrase()
+
+                    if phrase:
+                        last_live_time = now
+                        next_live_delay = random.randint(LIVE_COOLDOWN_MIN, LIVE_COOLDOWN_MAX)
+                        chat_activity = 0
+                        return phrase
 
             return ""
 
@@ -195,24 +248,13 @@ class LunaBrain:
         if react:
             return react
 
-        # памʼять (БЕЗ ІМЕН!)
-        memory = get_random_memory()
+        # памʼять (інколи)
+        if random.random() < 0.2:
+            phrase = build_live_phrase()
+            if phrase:
+                return phrase
 
-        if memory and "]" in memory:
-            memory = memory.split("]", 1)[1].strip()
-
-        if memory and random.random() < 0.3:
-            return memory
-
-        # fallback
-        clean_user = clean_username(user)
-
-        return random.choice([
-            f"{clean_user} 😏 цікаво",
-            f"{clean_user} 👀 я слухаю",
-            f"{clean_user} 😎 продовжуй",
-            f"{clean_user} 🔥 норм тема"
-        ])
+        return ""
 
 
 luna = LunaBrain()

@@ -21,6 +21,11 @@ next_live_delay = random.randint(
 chat_activity = 0
 
 
+# 🕒 TIME COOLDOWN
+last_time_talk = 0
+TIME_COOLDOWN = 900
+
+
 # 🔥 PARTY LINES
 party_lines = [
     "🎧 IN THE MIX 🔥",
@@ -336,10 +341,14 @@ class LunaBrain:
         global last_live_time
         global next_live_delay
         global chat_activity
+        global last_time_talk
 
         msg_l = msg.lower()
 
         chat_activity += 1
+
+        # 💾 MEMORY ALWAYS
+        learn_from_chat(user, msg)
 
         # 🔴 STOP
         if (
@@ -383,14 +392,30 @@ class LunaBrain:
 
                     self.last_responses.append(react)
 
-                    if len(self.last_responses) > 8:
+                    if len(self.last_responses) > 10:
                         self.last_responses.pop(0)
 
                     return react
 
-            # 🕒 time
-            if time_msg and random.random() < 0.25:
-                return time_msg
+            # 🕒 time cooldown
+            now = time.time()
+
+            if (
+                time_msg
+                and now - last_time_talk > TIME_COOLDOWN
+                and random.random() < 0.4
+            ):
+
+                last_time_talk = now
+
+                if time_msg not in self.last_responses:
+
+                    self.last_responses.append(time_msg)
+
+                    if len(self.last_responses) > 10:
+                        self.last_responses.pop(0)
+
+                    return time_msg
 
             # 🔥 PARTY RANDOM
             if (
@@ -407,11 +432,19 @@ class LunaBrain:
                     ]
                 )
             ):
-                return random.choice(party_lines)
+
+                party = random.choice(party_lines)
+
+                if party not in self.last_responses:
+
+                    self.last_responses.append(party)
+
+                    if len(self.last_responses) > 10:
+                        self.last_responses.pop(0)
+
+                    return party
 
             # 🔥 LIVE MODE
-            now = time.time()
-
             if now - last_live_time > next_live_delay:
 
                 if chat_activity > random.randint(5, 12):
@@ -419,6 +452,14 @@ class LunaBrain:
                     phrase = build_live_phrase()
 
                     if phrase:
+
+                        if phrase in self.last_responses:
+                            return ""
+
+                        self.last_responses.append(phrase)
+
+                        if len(self.last_responses) > 10:
+                            self.last_responses.pop(0)
 
                         last_live_time = now
 
@@ -436,9 +477,6 @@ class LunaBrain:
         # ✅ В СЕСІЇ
         update_activity()
 
-        # 💾 memory save
-        learn_from_chat(user, msg)
-
         # 😂 reaction
         react = reaction_reply(msg)
 
@@ -448,14 +486,24 @@ class LunaBrain:
 
                 self.last_responses.append(react)
 
-                if len(self.last_responses) > 8:
+                if len(self.last_responses) > 10:
                     self.last_responses.pop(0)
 
                 return react
 
         # 🔥 PARTY
         if random.random() < 0.08:
-            return random.choice(party_lines)
+
+            party = random.choice(party_lines)
+
+            if party not in self.last_responses:
+
+                self.last_responses.append(party)
+
+                if len(self.last_responses) > 10:
+                    self.last_responses.pop(0)
+
+                return party
 
         # 🔥 LIVE MEMORY
         if random.random() < 0.2:
@@ -463,9 +511,18 @@ class LunaBrain:
             phrase = build_live_phrase()
 
             if phrase:
+
+                if phrase in self.last_responses:
+                    return ""
+
+                self.last_responses.append(phrase)
+
+                if len(self.last_responses) > 10:
+                    self.last_responses.pop(0)
+
                 return phrase
 
-        # 🔥 BOOK + MEMORY MIX
+        # 🔥 MEMORY
         memory = get_random_memory()
 
         if memory and "]" in memory:
@@ -487,16 +544,18 @@ class LunaBrain:
                 "ммм... інтригує 😎"
             ]
 
-            return random.choice(fallback)
+            response = random.choice(fallback)
 
-        response = pick_response(
-            pool,
-            [],
-            msg
-        )
+        else:
 
-        if not response:
-            response = random.choice(pool)
+            response = pick_response(
+                pool,
+                [],
+                msg
+            )
+
+            if not response:
+                response = random.choice(pool)
 
         clean_user = clean_username(user)
 
@@ -505,8 +564,18 @@ class LunaBrain:
             clean_user
         )
 
-        if random.random() < 0.5:
+        # 🔥 ALWAYS USERNAME
+        if clean_user.lower() not in response.lower():
             response = f"{clean_user} 😏 {response}"
+
+        # 🔥 anti-repeat
+        if response in self.last_responses:
+            return ""
+
+        self.last_responses.append(response)
+
+        if len(self.last_responses) > 10:
+            self.last_responses.pop(0)
 
         return response
 

@@ -1,6 +1,6 @@
 import os
 import random
-import time
+import re
 
 # =========================
 # 📁 FILE PATH
@@ -9,13 +9,10 @@ import time
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MEM_FILE = os.path.join(BASE_DIR, "luna_memory.txt")
 
-# =========================
-# 📦 CREATE FILE IF NOT EXISTS
-# =========================
-
 if not os.path.exists(MEM_FILE):
     with open(MEM_FILE, "w", encoding="utf-8") as f:
         f.write("")
+
 
 # =========================
 # 🚫 VALIDATION
@@ -28,18 +25,34 @@ def is_valid(text):
 
     text = text.strip()
 
-    if len(text) < 3:
+    if len(text) < 3 or len(text) > 250:
         return False
 
-    if len(text) > 250:
-        return False
-
-    # занадто шумні повідомлення
     bad_ratio = len([c for c in text if not c.isalnum() and c not in " .,!?-"]) / max(len(text), 1)
     if bad_ratio > 0.4:
         return False
 
     return True
+
+
+# =========================
+# 🧼 ЧИСТКА ТЕКСТУ
+# =========================
+
+def clean_text(text):
+
+    text = text.strip()
+
+    # ❌ прибираємо нік на початку (типу "MOYA привіт")
+    text = re.sub(r"^[A-Za-z0-9_]+[\s,:-]+", "", text)
+
+    # ❌ прибираємо @username
+    text = re.sub(r"@\w+", "", text)
+
+    # ❌ прибираємо подвійні пробіли
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
 
 
 # =========================
@@ -66,16 +79,12 @@ def save_phrase(user, text):
         pass
 
 
-# =========================
-# 🧠 LEARN
-# =========================
-
 def learn_from_chat(user, message):
     save_phrase(user, message)
 
 
 # =========================
-# 🎯 SMART MEMORY PICK (АНТИ-ПОВТОРИ)
+# 🎯 SMART MEMORY
 # =========================
 
 last_memories = []
@@ -102,7 +111,14 @@ def get_random_memory():
         else:
             text = x.strip()
 
+        text = clean_text(text)
+
+        # ❌ коротке
         if len(text) < 5:
+            continue
+
+        # ❌ якщо є великі імена (типу MOYA, JOKER)
+        if re.search(r"\b[A-Z0-9_]{3,}\b", text):
             continue
 
         clean.append(text)
@@ -110,7 +126,6 @@ def get_random_memory():
     if not clean:
         return ""
 
-    # 🔥 НЕ повторюємо одне і те саме
     pool = [x for x in clean if x not in last_memories]
 
     if not pool:
@@ -127,7 +142,7 @@ def get_random_memory():
 
 
 # =========================
-# 🧠 НОВЕ: MEMORY З НІКОМ (ВИПРАВЛЕНО)
+# 🧠 MEMORY З USER
 # =========================
 
 def get_memory_with_user():
@@ -138,27 +153,30 @@ def get_memory_with_user():
     except:
         return None, None
 
-    if not lines:
-        return None, None
-
     valid = []
 
     for line in lines:
 
-        if "]" in line:
+        if "]" not in line:
+            continue
 
-            user = line.split("]", 1)[0].replace("[", "").strip()
+        user = line.split("]", 1)[0].replace("[", "").strip()
 
-            # 🔥 ІГНОРУЄМО [Memory]
-            if user.lower() == "memory":
-                continue
+        if user.lower() in ["memory", "luna"]:
+            continue
 
-            text = line.split("]", 1)[1].strip()
+        text = line.split("]", 1)[1].strip()
 
-            if len(text) < 3:
-                continue
+        text = clean_text(text)
 
-            valid.append((user, text))
+        if len(text) < 3:
+            continue
+
+        # ❌ прибираємо ніки
+        if re.search(r"\b[A-Z0-9_]{3,}\b", text):
+            continue
+
+        valid.append((user, text))
 
     if not valid:
         return None, None
@@ -167,7 +185,7 @@ def get_memory_with_user():
 
 
 # =========================
-# 📊 MEMORY STATS
+# 📊 STATS
 # =========================
 
 def memory_size():

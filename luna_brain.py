@@ -5,7 +5,7 @@ import time
 from luna_memory import learn_from_chat, get_random_memory
 from luna_mixer import pick_response
 from luna_time import get_time_message
-from luna_wiki import get_wiki_answer, should_use_wiki  # 🔥 ДОДАНО
+from luna_wiki import get_wiki_answer, should_use_wiki
 
 
 # 🔥 LIVE CONTROL
@@ -244,7 +244,7 @@ class LunaBrain:
 
         learn_from_chat(user, msg)
 
-        # 🔴 STOP FIX
+        # 🔴 STOP
         if msg_l.strip() in ["stop", "луна стоп"]:
             trigger_stop()
             return "окей… мовчу 😌"
@@ -258,6 +258,17 @@ class LunaBrain:
             open_session(user, self.detect_lang(msg))
 
         now = time.time()
+
+        # 🔥 WIKI ПЕРЕД TIME (ГОЛОВНИЙ ФІКС)
+        if should_use_wiki(msg):
+            if random.random() < 0.8:
+                wiki = get_wiki_answer(msg)
+
+                if wiki and wiki not in self.last_responses:
+                    final = f"{clean_username(user)} 😏 {wiki}"
+                    self.remember_response(final)
+                    return final
+
         time_msg = get_time_message()
 
         # 🔥 TIME
@@ -265,7 +276,7 @@ class LunaBrain:
             self.remember_response(time_msg)
             return time_msg
 
-        # ❗ НЕ В СЕСІЇ
+        # ❗ ДАЛІ ВСЕ ЯК БУЛО
         if not in_session(user):
 
             react = reaction_reply(msg)
@@ -273,23 +284,8 @@ class LunaBrain:
                 self.remember_response(react)
                 return react
 
-            # 🔥 WIKI AUTO (ТУТ ВСТАВЛЕНО ПРАВИЛЬНО)
-            if should_use_wiki(msg):
-
-                if random.random() < 0.5:
-
-                    wiki = get_wiki_answer(msg)
-
-                    if wiki and wiki not in self.last_responses:
-
-                        final = f"{clean_username(user)} 😏 {wiki}"
-                        self.remember_response(final)
-
-                        return final
-
             if random.random() < 0.05:
                 available = [x for x in party_lines if x not in self.last_responses]
-
                 if available:
                     party = random.choice(available)
                     self.remember_response(party)
@@ -316,7 +312,6 @@ class LunaBrain:
 
             return ""
 
-        # ✅ В СЕСІЇ
         update_activity()
 
         react = reaction_reply(msg)
@@ -324,23 +319,18 @@ class LunaBrain:
             self.remember_response(react)
             return react
 
-        # 🔥 WIKI AUTO (І В СЕСІЇ ТЕЖ)
+        # 🔥 WIKI В СЕСІЇ ТЕЖ
         if should_use_wiki(msg):
-
-            if random.random() < 0.5:
-
+            if random.random() < 0.8:
                 wiki = get_wiki_answer(msg)
 
                 if wiki and wiki not in self.last_responses:
-
                     final = f"{clean_username(user)} 😏 {wiki}"
                     self.remember_response(final)
-
                     return final
 
         if random.random() < 0.08:
             available = [x for x in party_lines if x not in self.last_responses]
-
             if available:
                 party = random.choice(available)
                 self.remember_response(party)
@@ -395,7 +385,6 @@ class LunaBrain:
         return response
 
 
-# 🚀 START
 luna = LunaBrain()
 
 

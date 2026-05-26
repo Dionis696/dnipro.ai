@@ -259,24 +259,23 @@ class LunaBrain:
 
         now = time.time()
 
-        # 🔥 WIKI ПЕРЕД TIME (ГОЛОВНИЙ ФІКС)
+        # 🔥🔥🔥 WIKI (БЕЗ БЛОКІВ І РАНДОМУ)
         if should_use_wiki(msg):
-            if random.random() < 0.8:
-                wiki = get_wiki_answer(msg)
 
-                if wiki and wiki not in self.last_responses:
-                    final = f"{clean_username(user)} 😏 {wiki}"
-                    self.remember_response(final)
-                    return final
+            wiki = get_wiki_answer(msg)
 
-        time_msg = get_time_message()
+            if wiki:
+                final = f"{clean_username(user)} 😏 {wiki}"
+                self.remember_response(final)
+                return final
 
         # 🔥 TIME
+        time_msg = get_time_message()
         if time_msg and time_msg not in self.last_responses:
             self.remember_response(time_msg)
             return time_msg
 
-        # ❗ ДАЛІ ВСЕ ЯК БУЛО
+        # ❗ НЕ В СЕСІЇ
         if not in_session(user):
 
             react = reaction_reply(msg)
@@ -312,22 +311,13 @@ class LunaBrain:
 
             return ""
 
+        # ✅ В СЕСІЇ
         update_activity()
 
         react = reaction_reply(msg)
         if react and react not in self.last_responses:
             self.remember_response(react)
             return react
-
-        # 🔥 WIKI В СЕСІЇ ТЕЖ
-        if should_use_wiki(msg):
-            if random.random() < 0.8:
-                wiki = get_wiki_answer(msg)
-
-                if wiki and wiki not in self.last_responses:
-                    final = f"{clean_username(user)} 😏 {wiki}"
-                    self.remember_response(final)
-                    return final
 
         if random.random() < 0.08:
             available = [x for x in party_lines if x not in self.last_responses]
@@ -385,6 +375,7 @@ class LunaBrain:
         return response
 
 
+# 🚀 START
 luna = LunaBrain()
 
 

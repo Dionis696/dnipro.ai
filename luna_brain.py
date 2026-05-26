@@ -5,6 +5,7 @@ import time
 from luna_memory import learn_from_chat, get_random_memory
 from luna_mixer import pick_response
 from luna_time import get_time_message
+from luna_wiki import get_wiki_answer, should_use_wiki  # 🔥 ДОДАНО
 
 
 # 🔥 LIVE CONTROL
@@ -208,7 +209,6 @@ class LunaBrain:
         if not text:
             return
 
-        # ❌ не забиваємо список часом
         if "..." in text and ":" in text:
             return
 
@@ -260,7 +260,7 @@ class LunaBrain:
         now = time.time()
         time_msg = get_time_message()
 
-        # 🔥 TIME FIX (один cooldown)
+        # 🔥 TIME
         if time_msg and time_msg not in self.last_responses:
             self.remember_response(time_msg)
             return time_msg
@@ -272,6 +272,20 @@ class LunaBrain:
             if react and react not in self.last_responses:
                 self.remember_response(react)
                 return react
+
+            # 🔥 WIKI AUTO (ТУТ ВСТАВЛЕНО ПРАВИЛЬНО)
+            if should_use_wiki(msg):
+
+                if random.random() < 0.5:
+
+                    wiki = get_wiki_answer(msg)
+
+                    if wiki and wiki not in self.last_responses:
+
+                        final = f"{clean_username(user)} 😏 {wiki}"
+                        self.remember_response(final)
+
+                        return final
 
             if random.random() < 0.05:
                 available = [x for x in party_lines if x not in self.last_responses]
@@ -309,6 +323,20 @@ class LunaBrain:
         if react and react not in self.last_responses:
             self.remember_response(react)
             return react
+
+        # 🔥 WIKI AUTO (І В СЕСІЇ ТЕЖ)
+        if should_use_wiki(msg):
+
+            if random.random() < 0.5:
+
+                wiki = get_wiki_answer(msg)
+
+                if wiki and wiki not in self.last_responses:
+
+                    final = f"{clean_username(user)} 😏 {wiki}"
+                    self.remember_response(final)
+
+                    return final
 
         if random.random() < 0.08:
             available = [x for x in party_lines if x not in self.last_responses]

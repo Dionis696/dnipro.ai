@@ -6,14 +6,12 @@ import pytz
 # 🇺🇦 timezone Київ
 KYIV_TZ = pytz.timezone("Europe/Kyiv")
 
-# ⏱ анти-спам
-last_time_talk = 0  
-
 # 🔥 інтервал (60–80 хв)
 MIN_DELAY = 3600
 MAX_DELAY = 4800
 
-next_trigger = time.time() + random.randint(MIN_DELAY, MAX_DELAY)
+# ✅ старт таймера
+next_trigger = int(time.time()) + random.randint(MIN_DELAY, MAX_DELAY)
 
 
 # =========================
@@ -21,15 +19,8 @@ next_trigger = time.time() + random.randint(MIN_DELAY, MAX_DELAY)
 # =========================
 
 def get_now():
-
     now = datetime.now(KYIV_TZ)
-
-    hour = now.hour
-    minute = now.minute
-
-    weekday = now.weekday()
-
-    return hour, minute, weekday
+    return now.hour, now.minute, now.weekday()
 
 
 # =========================
@@ -37,8 +28,7 @@ def get_now():
 # =========================
 
 def get_day_name(weekday):
-
-    days = [
+    return [
         "понеділок",
         "вівторок",
         "середа",
@@ -46,9 +36,7 @@ def get_day_name(weekday):
         "п’ятниця",
         "субота",
         "неділя"
-    ]
-
-    return days[weekday]
+    ][weekday]
 
 
 # =========================
@@ -56,7 +44,6 @@ def get_day_name(weekday):
 # =========================
 
 def get_period(hour):
-
     if 5 <= hour <= 10:
         return "morning"
     elif 11 <= hour <= 17:
@@ -68,11 +55,10 @@ def get_period(hour):
 
 
 # =========================
-# 🎭 ГЕНЕРАЦІЯ ФРАЗИ
+# 🎭 ФРАЗА ЧАСУ
 # =========================
 
 def build_time_phrase():
-
     hour, minute, weekday = get_now()
 
     day_name = get_day_name(weekday)
@@ -81,34 +67,27 @@ def build_time_phrase():
     time_str = f"{hour:02d}:{minute:02d}"
 
     if period == "morning":
-        variants = [
+        return random.choice([
             f"☀️ {time_str}… ви взагалі спите? 😄",
-            f"{day_name} ранок… а тут вже рух 😏",
-            f"{time_str}… новий день, новий вайб 👀"
-        ]
+            f"{day_name} ранок… а тут вже рух 😏"
+        ])
 
-    elif period == "day":
-        variants = [
+    if period == "day":
+        return random.choice([
             f"{time_str}… день іде, а атмосфера росте 😏",
-            f"{day_name} день… але тут свій світ 😎",
-            f"☀️ {time_str}… ще не вечір, але вже цікаво 👀"
-        ]
+            f"{day_name} день… але тут свій світ 😎"
+        ])
 
-    elif period == "evening":
-        variants = [
+    if period == "evening":
+        return random.choice([
             f"{time_str}… ідеальний час щоб почати 😏",
-            f"{day_name} вечір… ви ж відчуваєте це 🔥",
-            f"🌆 {time_str}… танцпол чекає 💃"
-        ]
+            f"{day_name} вечір… ви ж відчуваєте це 🔥"
+        ])
 
-    else:
-        variants = [
-            f"🌙 {time_str}… ніч тільки почалась 😏",
-            f"{time_str}… і ти ще тут… мені це подобається 👀",
-            f"{day_name} ніч… тут стає цікавіше 🔥"
-        ]
-
-    return random.choice(variants)
+    return random.choice([
+        f"🌙 {time_str}… ніч тільки почалась 😏",
+        f"{day_name} ніч… тут стає цікавіше 🔥"
+    ])
 
 
 # =========================
@@ -116,12 +95,12 @@ def build_time_phrase():
 # =========================
 
 def should_talk_time():
-
     global next_trigger
 
-    now = time.time()
+    now = int(time.time())  # ✅ беремо один раз
 
     if now >= next_trigger:
+        # ✅ твій фінальний фікс
         next_trigger = now + random.randint(MIN_DELAY, MAX_DELAY)
         return True
 
@@ -129,53 +108,10 @@ def should_talk_time():
 
 
 # =========================
-# 🚀 ГОЛОВНА ФУНКЦІЯ (твоя)
+# 🚀 ГОЛОВНА
 # =========================
 
 def get_time_message():
-
     if should_talk_time():
         return build_time_phrase()
-
     return None
-
-
-# =========================
-# ✅ ДОДАНО ДЛЯ LUNA_BRAIN
-# =========================
-
-def get_time_data():
-
-    hour, minute, weekday = get_now()
-
-    return {
-        "hour": hour,
-        "minute": minute,
-        "time": f"{hour:02d}:{minute:02d}",
-        "day": get_day_name(weekday)
-    }
-
-
-# =========================
-# 🔥 LIVE РЕЖИМ (САМА ПИШЕ)
-# =========================
-
-def live_loop(send_func):
-
-    while True:
-
-        delay = random.randint(MIN_DELAY, MAX_DELAY)
-        time.sleep(delay)
-
-        msg = build_time_phrase()
-
-        if msg:
-            send_func(msg)
-
-
-def start_live_mode(send_func):
-    import threading
-
-    t = threading.Thread(target=live_loop, args=(send_func,))
-    t.daemon = True
-    t.start()

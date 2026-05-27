@@ -26,6 +26,22 @@ chat_activity = 0
 
 
 # =========================
+# 🕒 TIME CONTROL
+# =========================
+
+last_time_message = 0
+TIME_COOLDOWN = 1800
+
+
+# =========================
+# 🌍 WIKI CONTROL
+# =========================
+
+last_wiki_time = 0
+WIKI_COOLDOWN = 15
+
+
+# =========================
 # 🧠 SESSION
 # =========================
 
@@ -285,7 +301,8 @@ class LunaBrain:
         global next_live_delay
         global chat_activity
 
-        update_activity()
+        global last_time_message
+        global last_wiki_time
 
         msg_l = msg.lower()
 
@@ -293,7 +310,12 @@ class LunaBrain:
 
         learn_from_chat(user, msg)
 
+        session_tick()
+
+        # =========================
         # 🔴 STOP
+        # =========================
+
         if msg_l.strip() in ["stop", "луна стоп"]:
 
             trigger_stop()
@@ -303,9 +325,10 @@ class LunaBrain:
         if not can_talk():
             return ""
 
-        session_tick()
-
+        # =========================
         # 🟢 SESSION START
+        # =========================
+
         if "луна" in msg_l or "luna" in msg_l:
 
             open_session(user)
@@ -314,43 +337,41 @@ class LunaBrain:
         # 🌍 WIKI MODE
         # =========================
 
-        if should_use_wiki(msg):
+        if (
+            should_use_wiki(msg)
+            and len(msg.split()) >= 2
+        ):
 
-            wiki = get_wiki_answer(msg)
+            now = time.time()
 
-            if wiki:
+            if now - last_wiki_time > WIKI_COOLDOWN:
 
-                clean_user = clean_username(user)
+                wiki = get_wiki_answer(msg)
 
-                intro = random.choice([
+                if wiki:
 
-                    "я десь таке читала 😏",
-                    "ммм… цікава тема 👀",
-                    "зараз поясню 😌",
-                    "о це я знаю 🔥"
-                ])
+                    last_wiki_time = now
 
-                final = f"{clean_user} 😏 {intro} {wiki}"
+                    clean_user = clean_username(user)
 
-                if final in self.last_responses:
+                    intro = random.choice([
 
-                    final += " 👀"
+                        "я десь таке читала 😏",
+                        "ммм… цікава тема 👀",
+                        "зараз поясню 😌",
+                        "о це я знаю 🔥"
+                    ])
 
-                self.remember_response(final)
+                    final = f"{clean_user} 😏 {intro} {wiki}"
 
-                return final
+                    if final in self.last_responses:
+                        final += " 👀"
 
-        # =========================
-        # 🕒 TIME
-        # =========================
+                    update_activity()
 
-        time_msg = get_time_message()
+                    self.remember_response(final)
 
-        if time_msg:
-
-            self.remember_response(time_msg)
-
-            return time_msg
+                    return final
 
         # =========================
         # 😂 REACTION
@@ -361,6 +382,8 @@ class LunaBrain:
         if react:
 
             if react not in self.last_responses:
+
+                update_activity()
 
                 self.remember_response(react)
 
@@ -385,8 +408,9 @@ class LunaBrain:
                     phrase = build_live_phrase()
 
                 if phrase in self.last_responses:
-
                     phrase += f" {random.choice(['😏','🔥'])}"
+
+                update_activity()
 
                 self.remember_response(phrase)
 
@@ -402,6 +426,29 @@ class LunaBrain:
                 return phrase
 
         # =========================
+        # 🕒 TIME
+        # =========================
+
+        time_msg = get_time_message()
+
+        if time_msg:
+
+            now = time.time()
+
+            if now - last_time_message > TIME_COOLDOWN:
+
+                last_time_message = now
+
+                if time_msg in self.last_responses:
+                    time_msg += f" {random.choice(['😏','👀'])}"
+
+                update_activity()
+
+                self.remember_response(time_msg)
+
+                return time_msg
+
+        # =========================
         # 🌙 SESSION MODE
         # =========================
 
@@ -412,6 +459,8 @@ class LunaBrain:
                 phrase = build_live_phrase()
 
                 if phrase not in self.last_responses:
+
+                    update_activity()
 
                     self.remember_response(phrase)
 
@@ -444,7 +493,6 @@ class LunaBrain:
 
         final = f"{clean_user} 😏 {response}"
 
-        # anti-repeat
         if final in self.last_responses:
 
             final = random.choice([
@@ -453,6 +501,8 @@ class LunaBrain:
                 f"{clean_user} 👀 ти сьогодні активний",
                 f"{clean_user} 🔥 ого"
             ])
+
+        update_activity()
 
         self.remember_response(final)
 

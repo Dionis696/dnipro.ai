@@ -57,17 +57,19 @@ def is_valid(text):
 
     text_l = text.lower()
 
+    # ❌ НЕ ВЧИМО ПИТАННЯ
+    if "?" in text:
+        return False
+
     if any(x in text_l for x in BAD_PARTS):
         return False
 
-    # 🔥 анти emoji-спам
     if text.count("😂") > 5:
         return False
 
     if text.count("🔥") > 5:
         return False
 
-    # 🔥 занадто багато символів
     bad_ratio = len([
         c for c in text
         if not c.isalnum() and c not in " .,!?'-🙂😏👀🔥😄😌🌙🎧💃"
@@ -76,7 +78,6 @@ def is_valid(text):
     if bad_ratio > 0.35:
         return False
 
-    # 🔥 CAPS нікнейми
     if re.search(r"\b[A-Z0-9_]{4,}\b", text):
         return False
 
@@ -88,7 +89,6 @@ def is_valid(text):
 # =========================
 
 def load_all():
-
     try:
         with open(MEM_FILE, "r", encoding="utf-8") as f:
             return [x.strip() for x in f if x.strip()]
@@ -102,7 +102,6 @@ def load_all():
 
 def save_phrase(user, text):
 
-    # 🔥 не вчимо саму себе
     if "luna" in user.lower():
         return
 
@@ -111,11 +110,9 @@ def save_phrase(user, text):
 
     text = clean_text(text)
 
-    # 🔥 анти дублікати
     existing = load_all()
 
     for line in existing:
-
         if "]" not in line:
             continue
 
@@ -182,7 +179,6 @@ def get_related_memory(msg):
             if f" {w} " in f" {text_l} ":
                 score += 1
 
-        # 🔥 мінімум 2 збіги (важливо)
         if score >= 2:
             scored.append((score, text))
 
@@ -191,9 +187,7 @@ def get_related_memory(msg):
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    top = scored[:3]
-
-    return random.choice(top)[1]
+    return random.choice(scored[:3])[1]
 
 
 # =========================
@@ -221,9 +215,7 @@ def get_random_memory():
         if not is_valid(text):
             continue
 
-        if text.lower() in [
-            "ok","ага","привіт","hello","hi","lol"
-        ]:
+        if text.lower() in ["ok","ага","привіт","hello","hi","lol"]:
             continue
 
         clean_pool.append(text)
@@ -244,50 +236,3 @@ def get_random_memory():
         last_memories.pop(0)
 
     return result
-
-
-# =========================
-# 👤 MEMORY + USER
-# =========================
-
-def get_memory_with_user():
-
-    lines = load_all()
-
-    valid = []
-
-    for line in lines:
-
-        if "]" not in line:
-            continue
-
-        user = line.split("]", 1)[0].replace("[", "").strip()
-        text = line.split("]", 1)[1].strip()
-
-        text = clean_text(text)
-
-        if not is_valid(text):
-            continue
-
-        if user.lower() in ["luna", "system", "memory"]:
-            continue
-
-        valid.append((user, text))
-
-    if not valid:
-        return None, None
-
-    return random.choice(valid)
-
-
-# =========================
-# 📊 STATS
-# =========================
-
-def memory_size():
-
-    try:
-        with open(MEM_FILE, "r", encoding="utf-8") as f:
-            return len(f.readlines())
-    except:
-        return 0

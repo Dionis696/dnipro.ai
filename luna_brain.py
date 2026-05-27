@@ -242,10 +242,15 @@ class LunaBrain:
             open_session(user)
 
         # =========================
-        # 🌍 WIKI
+        # 🌍 WIKI (🔥 ПОСИЛЕНИЙ ТРИГЕР)
         # =========================
 
-        if should_use_wiki(msg) and len(msg.split()) >= 2:
+        if (
+            should_use_wiki(msg)
+            or "що таке" in msg_l
+            or "шо таке" in msg_l
+            or "хто такий" in msg_l
+        ):
 
             if now - last_wiki_time > WIKI_COOLDOWN:
 
@@ -318,6 +323,14 @@ class LunaBrain:
             return time_msg
 
         # =========================
+        # ❗ НЕ НЕСТИ ФІГНЮ НА ПИТАННЯ
+        # =========================
+
+        if "?" in msg and not should_use_wiki(msg):
+            if not is_direct:
+                return ""
+
+        # =========================
         # 🧠 MEMORY
         # =========================
 
@@ -325,6 +338,10 @@ class LunaBrain:
 
         if not memory:
             memory = get_random_memory()
+
+        # ❌ не повторювати користувача
+        if memory and memory.lower() in msg_l:
+            memory = None
 
         if memory:
 
@@ -345,10 +362,10 @@ class LunaBrain:
                 return ""
 
             response = random.choice([
-                "цікаво 😏",
-                "ммм 👀",
-                "ого 🔥",
-                "інтригує 😌"
+                "я думаю над цим 😏",
+                "цікаве питання 👀",
+                "хмм… дай секунду 😌",
+                "ти змусив мене задуматись 😏"
             ])
 
         final = f"{clean_username(user)} 😏 {response}"

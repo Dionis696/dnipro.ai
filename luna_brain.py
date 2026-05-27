@@ -25,6 +25,7 @@ active_session_user = None
 session_until = 0
 
 stop_until = 0
+last_activity_time = time.time()
 
 
 # =========================
@@ -90,6 +91,15 @@ def can_talk():
 
 
 # =========================
+# 🟡 ACTIVITY
+# =========================
+
+def update_activity():
+    global last_activity_time
+    last_activity_time = time.time()
+
+
+# =========================
 # 😂 REACTIONS
 # =========================
 
@@ -150,9 +160,7 @@ class LunaBrain:
     def remember_response(self, text):
         if not text:
             return
-
         self.last_responses.append(text)
-
         if len(self.last_responses) > 10:
             self.last_responses.pop(0)
 
@@ -165,10 +173,6 @@ class LunaBrain:
         now = time.time()
 
         chat_activity += 1
-
-        # =========================
-        # 🤫 DIRECT CHECK
-        # =========================
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
@@ -237,6 +241,7 @@ class LunaBrain:
 
                     final = f"{clean_username(user)} 😏 {intro} {wiki}"
 
+                    update_activity()
                     self.remember_response(final)
                     return final
 
@@ -248,6 +253,7 @@ class LunaBrain:
 
         if react and random.random() < 0.30:
             if react not in self.last_responses:
+                update_activity()
                 self.remember_response(react)
                 return react
 
@@ -266,6 +272,7 @@ class LunaBrain:
             else:
                 phrase = build_live_phrase()
 
+            update_activity()
             self.remember_response(phrase)
 
             last_live_time = now
@@ -286,21 +293,25 @@ class LunaBrain:
             and random.random() < 0.15
         ):
             last_time_message = now
+            update_activity()
             self.remember_response(time_msg)
             return time_msg
 
         # =========================
-        # 🧠 MEMORY (РОЗУМНИЙ)
+        # 🧠 MEMORY
         # =========================
 
-        words = re.findall(r"\w+", msg_l)
-
-        memory = get_related_memory(words)
+        memory = get_related_memory(msg)   # ✅ ВИПРАВЛЕНО
 
         if not memory:
             memory = get_random_memory()
 
         if memory:
+
+            # 🔥 не влізати без звернення
+            if not is_direct and not in_session(user):
+                if random.random() < 0.85:
+                    return ""
 
             response = random.choice([
                 memory,
@@ -326,6 +337,7 @@ class LunaBrain:
         if final in self.last_responses:
             final += f" {random.choice(['😏','👀','🔥'])}"
 
+        update_activity()
         self.remember_response(final)
 
         return final

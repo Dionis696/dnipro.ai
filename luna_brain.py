@@ -100,6 +100,28 @@ def update_activity():
 
 
 # =========================
+# 🌙 IDLE (FIX ДЛЯ RENDER)
+# =========================
+
+def check_idle():
+
+    global last_activity_time
+
+    if time.time() - last_activity_time > 600:
+
+        update_activity()
+
+        return random.choice([
+            "хтось ще не спить? 👀",
+            "ніч сьогодні дивна 😏",
+            "музика ще жива 🎧",
+            "Dnipro Club не спить 🔥"
+        ])
+
+    return None
+
+
+# =========================
 # 😂 REACTIONS
 # =========================
 
@@ -197,6 +219,7 @@ class LunaBrain:
 
         if msg_l in ["stop", "луна стоп"]:
             trigger_stop()
+            update_activity()
             return "окей… мовчу 😌"
 
         if not can_talk():
@@ -267,10 +290,7 @@ class LunaBrain:
             and random.random() < 0.18
         ):
 
-            if random.random() < 0.5:
-                phrase = random.choice(party_lines)
-            else:
-                phrase = build_live_phrase()
+            phrase = random.choice(party_lines) if random.random() < 0.5 else build_live_phrase()
 
             update_activity()
             self.remember_response(phrase)
@@ -301,14 +321,13 @@ class LunaBrain:
         # 🧠 MEMORY
         # =========================
 
-        memory = get_related_memory(msg)   # ✅ ВИПРАВЛЕНО
+        memory = get_related_memory(msg)
 
         if not memory:
             memory = get_random_memory()
 
         if memory:
 
-            # 🔥 не влізати без звернення
             if not is_direct and not in_session(user):
                 if random.random() < 0.85:
                     return ""

@@ -100,7 +100,7 @@ def update_activity():
 
 
 # =========================
-# 🌙 IDLE (FIX ДЛЯ RENDER)
+# 🌙 IDLE
 # =========================
 
 def check_idle():
@@ -242,7 +242,7 @@ class LunaBrain:
             open_session(user)
 
         # =========================
-        # 🌍 WIKI (🔥 ПОСИЛЕНИЙ ТРИГЕР)
+        # 🌍 WIKI (🔥 ПОСИЛЕНИЙ)
         # =========================
 
         if (
@@ -336,12 +336,12 @@ class LunaBrain:
 
         memory = get_related_memory(msg)
 
-        if not memory:
-            memory = get_random_memory()
-
-        # ❌ не повторювати користувача
+        # 🔥 анти-копія користувача
         if memory and memory.lower() in msg_l:
             memory = None
+
+        if not memory:
+            memory = get_random_memory()
 
         if memory:
 
@@ -361,6 +361,7 @@ class LunaBrain:
             if not is_direct:
                 return ""
 
+            # 🔥 НОРМАЛЬНИЙ fallback
             response = random.choice([
                 "я думаю над цим 😏",
                 "цікаве питання 👀",

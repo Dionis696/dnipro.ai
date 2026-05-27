@@ -67,6 +67,7 @@ def is_valid(text):
     if text.count("🔥") > 5:
         return False
 
+    # 🔥 занадто багато символів
     bad_ratio = len([
         c for c in text
         if not c.isalnum() and c not in " .,!?'-🙂😏👀🔥😄😌🌙🎧💃"
@@ -75,6 +76,7 @@ def is_valid(text):
     if bad_ratio > 0.35:
         return False
 
+    # 🔥 CAPS нікнейми
     if re.search(r"\b[A-Z0-9_]{4,}\b", text):
         return False
 
@@ -100,7 +102,7 @@ def load_all():
 
 def save_phrase(user, text):
 
-    # 🔥 не вчимо саму себе (будь-який варіант Luna)
+    # 🔥 не вчимо саму себе
     if "luna" in user.lower():
         return
 
@@ -136,7 +138,7 @@ def learn_from_chat(user, message):
 
 
 # =========================
-# 🎯 RELATED MEMORY (РОЗУМНИЙ ПОШУК)
+# 🎯 RELATED MEMORY
 # =========================
 
 def get_related_memory(msg):
@@ -150,7 +152,6 @@ def get_related_memory(msg):
 
     ignore_words = ["клуб", "ніч", "музика", "dj", "луна"]
 
-    # 🔥 FIX split() → regex
     words = re.findall(r"\w+", msg_l)
     words = [
         w for w in words
@@ -178,12 +179,10 @@ def get_related_memory(msg):
         score = 0
 
         for w in words:
-
-            # 🔥 точніше співпадіння
             if f" {w} " in f" {text_l} ":
                 score += 1
 
-        # 🔥 мінімум 2 збіги
+        # 🔥 мінімум 2 збіги (важливо)
         if score >= 2:
             scored.append((score, text))
 
@@ -198,7 +197,7 @@ def get_related_memory(msg):
 
 
 # =========================
-# 🎲 RANDOM MEMORY (fallback)
+# 🎲 RANDOM MEMORY
 # =========================
 
 last_memories = []

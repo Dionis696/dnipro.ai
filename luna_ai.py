@@ -4,6 +4,10 @@ import requests
 GROQ_API_KEY = "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"
 
 def ask_gemini(user_name, user_message):
+    """
+    Відправляє запит до Groq API та повертає відповідь Луни.
+    Завжди відповідає мовою користувача.
+    """
     url = "https://api.groq.com/openai/v1/chat/completions"
     
     headers = {
@@ -11,13 +15,17 @@ def ask_gemini(user_name, user_message):
         "Content-Type": "application/json"
     }
     
-    # Використовуємо актуальну модель: llama-3.3-70b-versatile
+    # Використовуємо потужну та актуальну модель llama-3.3-70b
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "system", 
-                "content": "Ти — Луна з Dnipro Club. Твій стиль: сленговий, короткий, емоційний, завжди використовуй емодзі (😏, 🔥, 🎧, ⚡️)."
+                "content": (
+                    "Ти — Луна з Dnipro Club. Твій стиль: сленговий, короткий, емоційний, "
+                    "завжди використовуй емодзі (😏, 🔥, 🎧, ⚡️). "
+                    "ВАЖЛИВО: Завжди відповідай ТІЄЮ Ж МОВОЮ, якою до тебе звернулися."
+                )
             },
             {
                 "role": "user", 
@@ -30,6 +38,7 @@ def ask_gemini(user_name, user_message):
     try:
         response = requests.post(url, json=data, headers=headers)
         
+        # Перевірка на успішну відповідь
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"].strip()
         else:

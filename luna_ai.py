@@ -1,29 +1,39 @@
-from google import genai
-from google.genai import types
+import requests
 
-# Твій "AQ..." токен
-TOKEN = "AQ.Ab8RN6J1e83tncvgZfHMVcXkeZ93DFq1Dt4YS3f1TLGdDrdfEQ"
+# Твій робочий ключ Groq
+GROQ_API_KEY = "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"
 
 def ask_gemini(user_name, user_message):
-    print(f"🚀 [LUNA_AI] Спроба виклику через Bearer-токен для: '{user_name}'", flush=True)
+    url = "https://api.groq.com/openai/v1/chat/completions"
     
-    # Використовуємо токен як авторизацію
-    client = genai.Client(
-        http_options={'headers': {'Authorization': f'Bearer {TOKEN}'}}
-    )
-
-    system_instruction = "Ти — Луна з Dnipro Club. Відповідай коротко (1-2 речення), сленгово, з емодзі."
-
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {
+                "role": "system", 
+                "content": "Ти — Луна з Dnipro Club. Твій стиль: сленговий, короткий, емоційний, завжди використовуй емодзі (😏, 🔥, 🎧, ⚡️)."
+            },
+            {
+                "role": "user", 
+                "content": f"{user_name} каже: {user_message}"
+            }
+        ]
+    }
+    
     try:
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=f"Користувач {user_name} каже: {user_message}",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.85,
-            )
-        )
-        return response.text.strip()
+        response = requests.post(url, json=data, headers=headers)
+        
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"].strip()
+        else:
+            print(f"❌ Помилка API: {response.status_code} - {response.text}")
+            return "Луна зараз ставить новий трек, спробуй пізніше! 🎧"
+            
     except Exception as e:
-        print(f"💥 ПОМИЛКА авторизації: {e}", flush=True)
-        return None
+        print(f"💥 Помилка: {e}")
+        return "Луна на танцполі, не чує! 🔥"

@@ -2,7 +2,12 @@ import random
 import re
 import time
 
-from luna_memory import learn_from_chat, get_random_memory, get_related_memory
+from luna_memory import (
+    learn_from_chat,
+    get_random_memory,
+    get_related_memory
+)
+
 from luna_time import get_time_message
 from luna_wiki import get_wiki_answer, should_use_wiki
 
@@ -177,7 +182,9 @@ def build_live_phrase():
 class LunaBrain:
 
     def __init__(self):
+
         self.last_responses = []
+        self.user_topics = {}
 
     def remember_response(self, text):
         if not text:
@@ -193,6 +200,15 @@ class LunaBrain:
 
         msg_l = msg.lower().strip()
         now = time.time()
+
+        # 🧠 USER MEMORY
+        if user not in self.user_topics:
+            self.user_topics[user] = []
+
+        self.user_topics[user].append(msg)
+
+        if len(self.user_topics[user]) > 10:
+            self.user_topics[user].pop(0)
 
         chat_activity += 1
 
@@ -242,7 +258,46 @@ class LunaBrain:
             open_session(user)
 
         # =========================
-        # 🌍 WIKI (🔥 ПОСИЛЕНИЙ)
+        # 💬 SIMPLE DIALOG
+        # =========================
+
+        if is_direct:
+
+            if any(x in msg_l for x in [
+                "як поживаєш",
+                "як справи",
+                "як ти"
+            ]):
+
+                return random.choice([
+                    "у мене все добре 😏",
+                    "та потроху живу 🎧",
+                    "слухаю музику і чат 👀",
+                    "ніч проходить цікаво 😌"
+                ])
+
+            if "шо нового" in msg_l or "що нового" in msg_l:
+
+                return random.choice([
+                    "та нічого особливого 😏",
+                    "спостерігаю за вами 👀",
+                    "слухаю чат і запам’ятовую 😌"
+                ])
+
+            if "хто сьогодні діджеє" in msg_l:
+
+                return random.choice([
+                    "сьогодні музика точно качає 🎧",
+                    "схоже діджей у хорошому настрої 😏"
+                ])
+
+            if "який зараз час" in msg_l:
+
+                tm = time.localtime()
+                return f"Зараз {tm.tm_hour:02d}:{tm.tm_min:02d} 😏"
+
+        # =========================
+        # 🌍 WIKI
         # =========================
 
         if (
@@ -274,94 +329,25 @@ class LunaBrain:
                     return final
 
         # =========================
-        # 😂 REACTION
-        # =========================
-
-        react = reaction_reply(msg)
-
-        if react and random.random() < 0.30:
-            if react not in self.last_responses:
-                update_activity()
-                self.remember_response(react)
-                return react
-
-        # =========================
-        # 🔥 LIVE
-        # =========================
-
-        if (
-            now - last_live_time > next_live_delay
-            and chat_activity >= random.randint(6, 12)
-            and random.random() < 0.18
-        ):
-
-            phrase = random.choice(party_lines) if random.random() < 0.5 else build_live_phrase()
-
-            update_activity()
-            self.remember_response(phrase)
-
-            last_live_time = now
-            next_live_delay = random.randint(180, 360)
-            chat_activity = 0
-
-            return phrase
-
-        # =========================
-        # 🕒 TIME
-        # =========================
-
-        time_msg = get_time_message()
-
-        if (
-            time_msg
-            and now - last_time_message > TIME_COOLDOWN
-            and random.random() < 0.15
-        ):
-            last_time_message = now
-            update_activity()
-            self.remember_response(time_msg)
-            return time_msg
-
-        # =========================
-        # ❗ НЕ НЕСТИ ФІГНЮ НА ПИТАННЯ
-        # =========================
-
-        if "?" in msg and not should_use_wiki(msg):
-            if not is_direct:
-                return ""
-
-        # =========================
         # 🧠 MEMORY
         # =========================
 
-        memory = get_related_memory(msg)
+        response = get_related_memory(msg)
 
-        # 🔥 анти-копія користувача
-        if memory and memory.lower() in msg_l:
-            memory = None
-
-        if not memory:
-            memory = get_random_memory()
-
-        if memory:
-
-            if not is_direct and not in_session(user):
-                if random.random() < 0.85:
-                    return ""
+        if response:
 
             response = random.choice([
-                memory,
-                f"ммм 😏 {memory}",
-                f"цікаво… {memory}",
-                f"👀 {memory}"
+                response,
+                f"ммм 😏 {response}",
+                f"цікаво… {response}",
+                f"👀 {response}"
             ])
 
-        else:
+        if not response:
 
             if not is_direct:
                 return ""
 
-            # 🔥 НОРМАЛЬНИЙ fallback
             response = random.choice([
                 "я думаю над цим 😏",
                 "цікаве питання 👀",

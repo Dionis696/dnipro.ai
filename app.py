@@ -1,50 +1,51 @@
-from flask import Flask, request, Response
-import json
-import os
+ЩО ТЕПЕР РОБИТЬ app.py
+1. 🧠 Отримує повідомлення з Second Life
 
-from luna_brain import luna
+LSL шле:
 
-app = Flask(__name__)
+{ "user": "Dzoker007", "message": "луна як справи" }
 
+👉 Flask приймає це тут:
 
-@app.route("/")
-def home():
-    return "Luna ONLINE 😏"
+data = request.json
+2. 🚀 Передає в мозок
+reply = luna.reply(user, message)
 
+👉 тут працює:
 
-@app.route("/chat", methods=["POST"])
-def chat():
+wiki
+gemini
+memory
+3. 🛑 ФІЛЬТР ПІНГУ (ДУЖЕ ВАЖЛИВО)
+if reply == "":
+    return Response("", status=204)
 
-    data = request.json or {}
+👉 це означає:
 
-    user = data.get("user", "unknown")
-    message = data.get("message", "")
+якщо:
+ping
+або Луна мовчить
+👉 сервер НЕ шле JSON
 
-    reply = ""
+💥 це дає:
 
-    try:
-        # 🔥 максимально швидка відповідь
-        reply = luna.reply(user, message)
+менше трафіку
+швидше відповідь
+менше лагів у Second Life
+4. 💬 Якщо є відповідь
+{"reply": "Dzoker007 😏 все добре"}
 
-        # ❗ не даємо None
-        if not reply:
-            reply = ""
+👉 LSL читає і каже в чат
 
-    except Exception as e:
-        print("Luna ERROR:", e)
-        reply = ""
+⚠️ ВАЖЛИВА ШТУКА (ДУЖЕ)
+Якщо бачиш:
 
-    return Response(
-        json.dumps({"reply": reply}, ensure_ascii=False),
-        content_type="application/json; charset=utf-8"
-    )
+"Пользователь не в сети"
 
+👉 це НЕ Python проблема
 
-if __name__ == "__main__":
+👉 це означає:
 
-    print("🔥 Luna ONLINE")
-
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000))
-    )
+об’єкт у SL не може говорити
+або ти не поруч
+або лаг

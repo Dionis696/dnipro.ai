@@ -2,11 +2,11 @@ import os
 from google import genai
 from google.genai import types
 
-# 🔑 Встав сюди свій ключ (AQ...)
+# 🔑 Твій ключ
 GEMINI_API_KEY = "AQ.Ab8RN6IUXWDUcB3nwmArcwI4JbTy1wuDGL4DIKdhiLKFs9IlNw"
 
-# Ініціалізація клієнта
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Ініціалізація з явною версією API (v1beta потрібна для SDK)
+client = genai.Client(api_key=GEMINI_API_KEY, http_options={'api_version': 'v1beta'})
 
 def ask_gemini(user_name, user_message):
     print(f"🚀 [LUNA_AI] Виклик Gemini для: '{user_name}'", flush=True)
@@ -17,9 +17,9 @@ def ask_gemini(user_name, user_message):
     )
 
     try:
-        # Використовуємо офіційний метод для стабільної роботи
+        # Використовуємо 'models/gemini-1.5-flash' як повний шлях
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='models/gemini-1.5-flash',
             contents=f"Користувач {user_name} каже: {user_message}",
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

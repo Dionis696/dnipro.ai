@@ -1,17 +1,18 @@
-import os
 from google import genai
 from google.genai import types
 
-# Клієнт автоматично шукає ключ у змінній середовища GOOGLE_API_KEY
-client = genai.Client()
+# Твій "AQ..." токен
+TOKEN = "AQ.Ab8RN6J1e83tncvgZfHMVcXkeZ93DFq1Dt4YS3f1TLGdDrdfEQ"
 
 def ask_gemini(user_name, user_message):
-    print(f"🚀 [LUNA_AI] Виклик Gemini для: '{user_name}'", flush=True)
-
-    system_instruction = (
-        "Ти — Луна, зухвала та харизматична тусовщиця 'Dnipro Club'. "
-        "Відповідай коротко (1-2 речення), сленгово, з емодзі 😏, 🔥, 🎧."
+    print(f"🚀 [LUNA_AI] Спроба виклику через Bearer-токен для: '{user_name}'", flush=True)
+    
+    # Використовуємо токен як авторизацію
+    client = genai.Client(
+        http_options={'headers': {'Authorization': f'Bearer {TOKEN}'}}
     )
+
+    system_instruction = "Ти — Луна з Dnipro Club. Відповідай коротко (1-2 речення), сленгово, з емодзі."
 
     try:
         response = client.models.generate_content(
@@ -24,5 +25,5 @@ def ask_gemini(user_name, user_message):
         )
         return response.text.strip()
     except Exception as e:
-        print(f"💥 [LUNA_AI] ПОМИЛКА: {str(e)}", flush=True)
+        print(f"💥 ПОМИЛКА авторизації: {e}", flush=True)
         return None

@@ -4,7 +4,7 @@ import time
 from luna_memory import learn_from_chat, get_random_memory, get_related_memory
 from luna_wiki import get_wiki_answer, should_use_wiki
 from luna_ai import ask_gemini
-
+from luna_time import get_time_message  # Додано інтеграцію часу
 
 # =========================
 # 🔥 GLOBAL
@@ -97,25 +97,24 @@ class LunaBrain:
             self.last_responses.pop(0)
 
     def reply(self, user, msg):
-
         global last_wiki_time
 
         msg_l = msg.lower().strip()
         now = time.time()
 
-        # =========================
         # 🛑 ТИХИЙ ПІНГ
-        # =========================
         if not msg_l or msg_l == "ping" or user == "system":
             update_activity()
             return ""
 
+        # ⏱ ПЕРЕВІРКА ЧАСУ (якщо прийшов час для автоматичного повідомлення)
+        time_msg = get_time_message()
+        if time_msg:
+            return f"Луна 😏 {time_msg}"
+
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # =========================
         # 🧠 USER MEMORY
-        # =========================
-
         if user not in self.user_topics:
             self.user_topics[user] = []
 
@@ -124,67 +123,40 @@ class LunaBrain:
         if len(self.user_topics[user]) > 10:
             self.user_topics[user].pop(0)
 
-        # =========================
         # 🧠 LEARN
-        # =========================
-
         if 4 < len(msg) < 180:
             learn_from_chat(user, msg)
 
         session_tick()
 
-        # =========================
         # 🟢 SESSION
-        # =========================
-
         if is_direct:
             open_session(user)
 
-        # =========================
         # 🌍 WIKI
-        # =========================
-
         if should_use_wiki(msg):
-
             if now - last_wiki_time > WIKI_COOLDOWN:
-
                 wiki = get_wiki_answer(msg)
-
                 if wiki:
                     print(f"🌍 [WIKI] Відповідь для {user}: {wiki}", flush=True)
-
                     last_wiki_time = now
-
                     final = f"{clean_username(user)} 😏 {wiki}"
-
                     update_activity()
                     self.remember_response(final)
                     return final
 
-        # =========================
         # 🤫 НЕ ЛІЗТИ В ЧУЖИЙ ЧАТ
-        # =========================
-
         if not is_direct and not in_session(user):
             return ""
 
-        # =========================
-        # 🤖 GROQ API (Оновлено назву для логів)
-        # =========================
-
+        # 🤖 GROQ API
         print(f"📡 [GROQ] Запит від {clean_username(user)}: '{msg}'", flush=True)
-
         response = ask_gemini(clean_username(user), msg)
 
-        # =========================
         # 🧠 FALLBACK
-        # =========================
-
         if not response:
             print("⚠️ [FALLBACK] Groq не відповів → беремо памʼять", flush=True)
-
             memory = get_related_memory(msg) or get_random_memory()
-
             if memory:
                 response = random.choice([
                     memory,
@@ -193,23 +165,17 @@ class LunaBrain:
                 ])
             else:
                 response = "щось сьогодні зв'язок плаває 😏"
-
         else:
             print(f"✅ [GROQ OK] {response}", flush=True)
 
-        # =========================
         # 🧹 АНТИ-ПОВТОР
-        # =========================
-
         if msg_l in response.lower() or response.lower() in msg_l:
             print("⚠️ [ANTI-REPEAT] Спіймано повтор → заміна", flush=True)
-
             memory = get_random_memory()
             if memory:
                 response = memory
 
         final = f"{clean_username(user)} 😏 {response}"
-
         update_activity()
         self.remember_response(final)
 

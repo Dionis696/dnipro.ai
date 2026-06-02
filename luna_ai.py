@@ -1,27 +1,28 @@
 import os
 import requests
 
-# 🔑 Беремо ключ з налаштувань Render. Якщо тестуєш на комп'ютері, встав свій ключ другим параметром.
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "ТВІЙ_КЛЮЧ_ДЛЯ_ЛОКАЛЬНОГО_ТЕСТУ")
+# Зчитуємо ключ із секретних змінних оточення Render
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 def ask_gemini(user_name, user_message):
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "ТВІЙ_КЛЮЧ_ДЛЯ_ЛОКАЛЬНОГО_ТЕСТУ":
-        print("GEMINI ERROR: Ключ API не знайдено або не налаштовано!")
+    # Якщо ключ забули додати в Render, виводимо помилку в логи і повертаємо None (включиться фолбек)
+    if not GEMINI_API_KEY:
+        print("GEMINI AI ERROR: API Ключ не знайдено в системних змінних Render (GEMINI_API_KEY)!")
         return None
 
-    # 🔥 Використовуємо нову швидку модель gemini-1.5-flash
+    # Використовуємо швидку, стабільну та безкоштовну модель gemini-1.5-flash
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-    # 🎭 Формуємо характер Луни прямо всередині запиту
+    # 🎭 Задаємо характер Луни. Вона знає де вона перебуває і як себе поводити.
     system_instruction = (
         "Ти — Луна, зухвала, розумна та неймовірно харизматична тусовщиця нічного клубу 'Dnipro Club' у Second Life. "
         "Ти обожнюєш електронну музику, нічний вайб, глибокі баси та гучні вечірки. "
         "Твої відповіді обов'язково мають бути короткими (максимум 1-2 речення), бо ти пишеш в ігровий чат, де люди не читають довгі тексти. "
         "Спілкуйся невимушено, використовуй легкий клубний сленг, інколи додавай емодзі 😏, 🔥, 🎧, 👀, 😉. "
-        "Звертайся до людей дружньо або з легкою іронією. Не поводься як робот-асистент, ти — живий гість клубу."
+        "Звертайся до людей дружньо або з легкою іронією. Не поводься як робот-асистент чи ШІ, ти — живий гість клубу."
     )
 
-    # 📦 Структура запиту з системною інструкцією для нової моделі 1.5-flash
+    # Структура JSON запиту відповідно до офіційної документації Google API v1beta
     data = {
         "systemInstruction": {
             "parts": [{"text": system_instruction}]
@@ -34,20 +35,21 @@ def ask_gemini(user_name, user_message):
         ],
         "generationConfig": {
             "temperature": 0.85,
-            "maxOutputTokens": 120  # Щоб відповідь гарантовано влізла в ліміти тексту Second Life
+            "maxOutputTokens": 120  # Гарантує, що відповідь не обріжеться лімітами чату Second Life
         }
     }
 
     try:
-        r = requests.post(url, json=data, timeout=8)
+        # Надсилаємо POST запит з таймаутом, щоб гра не зависала, якщо Google довго думає
+        r = requests.post(url, json=data, timeout=7)
 
         if r.status_code != 200:
-            print(f"GEMINI ERROR: Статус {r.status_code}, Відповідь: {r.text}")
+            print(f"GEMINI API БАГ: Статус {r.status_code}, Текст: {r.text}")
             return None
 
         result = r.json()
         
-        # Витягуємо згенерований текст
+        # Парсимо текст відповіді
         text = result["candidates"][0]["content"]["parts"][0]["text"]
         return text.strip()
 

@@ -169,10 +169,10 @@ class LunaBrain:
             return ""
 
         # =========================
-        # 🤖 GEMINI
+        # 🤖 GROQ API
         # =========================
 
-        print(f"📡 [GEMINI] Запит від {clean_username(user)}: '{msg}'", flush=True)
+        print(f"📡 [GROQ] Запит від {clean_username(user)}: '{msg}'", flush=True)
 
         response = ask_gemini(clean_username(user), msg)
 
@@ -181,7 +181,7 @@ class LunaBrain:
         # =========================
 
         if not response:
-            print("⚠️ [FALLBACK] Gemini не відповів → беремо памʼять", flush=True)
+            print("⚠️ [FALLBACK] Groq не відповів → беремо памʼять", flush=True)
 
             memory = get_related_memory(msg) or get_random_memory()
 
@@ -195,7 +195,7 @@ class LunaBrain:
                 response = "щось сьогодні зв'язок плаває 😏"
 
         else:
-            print(f"✅ [GEMINI OK] {response}", flush=True)
+            print(f"✅ [GROQ OK] {response}", flush=True)
 
         # =========================
         # 🧹 АНТИ-ПОВТОР

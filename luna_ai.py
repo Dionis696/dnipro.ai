@@ -17,37 +17,35 @@ def ask_gemini(user_name, user_message):
         masked_key = f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if len(GEMINI_API_KEY) > 8 else "ЗАКОРОТКИЙ_КЛЮЧ"
         print(f"🔑 [LUNA_AI] Ключ зчитано прямо з коду файлу: {masked_key}", flush=True)
 
-    # Стабільний URL Google API v1
+    # Базовий стабільний URL Google API v1
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-    # 🎭 Характер Луни
-    system_prompt = (
-        "Ти — Луна, зухвала, розумна та неймовірно харизматична тусовщиця нічного клубу 'Dnipro Club' у Second Life. "
+    # 🎭 Характер Луни (зашиваємо як Context безпосередньо в запит, щоб обійти баги Google JSON)
+    context_prompt = (
+        "CONTEXT: Ти — Луна, зухвала, розумна та харизматична тусовщиця нічного клубу 'Dnipro Club' у Second Life. "
         "Ти обожнюєш електронну музику, нічний вайб, глибокі баси та гучні вечірки. "
-        "Твої відповіді обов'язково мають бути короткими (максимум 1-2 речення), бо ти пишеш в ігровий чат, де люди не читають довгі тексти. "
-        "Спілкуйся невимушено, використовуй легкий клубний сленг, інколи додавай емодзі 😏, 🔥, 🎧, 👀, 😉. "
-        "Звертайся до людей дружньо або з легкою іронією. Не поводься як робот-асистент чи ШІ, ти — живий гість клубу."
+        "Твої відповіді обов'язково мають бути короткими (максимум 1-2 речення), бо ти пишеш в ігровий чат. "
+        "Спілкуйся невимушено, використовуй легкий клубний сленг, додавай емодзі 😏, 🔥, 🎧, 👀, 😉. "
+        "Звертайся до людей дружньо або з легкою іронією. Ти живий гість клубу, а не ШІ.\n\n"
+        f"Користувач {user_name} каже тобі: {user_message}\n"
+        "Твоя коротка відповідь від імені Луни:"
     )
 
-    # 🛠️ ФІКС JSON: Формат відповідно до офіційного стандарту Google Gemini v1 API
+    # 🛠️ НАДНАДІЙНИЙ JSON: Тільки стандартне поле contents, яке працює всюди
     data = {
         "contents": [
             {
-                "role": "user",
-                "parts": [{"text": f"Користувач {user_name} каже тобі: {user_message}"}]
+                "parts": [{"text": context_prompt}]
             }
         ],
-        "system_instruction": {
-            "parts": [{"text": system_prompt}]
-        },
         "generationConfig": {
-            "temperature": 0.85,
+            "temperature": 0.9,
             "maxOutputTokens": 120
         }
     }
 
     try:
-        print("📡 [LUNA_AI] Надсилаю виправлений POST-запит до Google Gemini API (v1)...", flush=True)
+        print("📡 [LUNA_AI] Надсилаю супер-надійний POST-запит до Google Gemini API...", flush=True)
         
         # Надсилаємо POST запит з таймаутом 7 секунд
         r = requests.post(url, json=data, timeout=7)

@@ -2,11 +2,12 @@ import requests
 import re
 
 # =========================
-# 🧠 WIKI TRIGGERS
+# 🧠 WIKI TRIGGERS (РОЗШИРЕНІ)
 # =========================
 
 WIKI_TRIGGERS = [
 
+    # 🇺🇦 ПИТАННЯ
     "що таке","що це","що означає","що значить","в чому суть",
     "як це працює","поясни","поясни мені","розкажи","розкажи про",
     "дай інфу","дай інформацію","хочу знати","що воно таке","шо це",
@@ -24,10 +25,24 @@ WIKI_TRIGGERS = [
     "як працює","принцип роботи","механізм",
     "структура","система","алгоритм",
 
+    # 🇬🇧 ENG
     "what is","who is","tell me about","explain",
     "define","meaning of","facts about","history of",
 
-    "вікі","wiki","wikipedia","знайди","погугли"
+    # 🔎 ПРЯМІ
+    "вікі","wiki","wikipedia","знайди","погугли",
+
+    # 🔥 ДОДАТКОВІ (ЩОБ ЛОВИЛО ВСЕ)
+    "шо за","шо це таке","шо означає",
+    "розкажи детальніше","дай більше інформації",
+    "шо воно","шо за штука",
+    "як воно працює","як це влаштовано",
+
+    "хто він","хто вона","шо це взагалі",
+    "це що","це хто",
+
+    "more about","info about","details about",
+    "explain this","tell me more"
 ]
 
 
@@ -39,17 +54,19 @@ def should_use_wiki(msg):
 
     msg = msg.lower()
 
+    # тригери
     if any(t in msg for t in WIKI_TRIGGERS):
         return True
 
-    if "?" in msg and 8 < len(msg) < 80:
+    # будь-яке нормальне питання
+    if "?" in msg and len(msg) > 5:
         return True
 
     return False
 
 
 # =========================
-# 🌍 CLEAN QUERY
+# 🧼 CLEAN QUERY
 # =========================
 
 def clean_query(text):
@@ -65,72 +82,66 @@ def clean_query(text):
 
 
 # =========================
-# 🌐 GET WIKI
+# 🌍 GET WIKI (SEARCH + SUMMARY)
 # =========================
 
 def get_wiki_answer(query):
 
-    print("WIKI:", query)
+    print("WIKI QUERY:", query)
 
     q = clean_query(query)
 
     if not q:
         q = query.lower()
 
-    q = q.strip()
-
-    if not q:
-        return None
-
-    q = q.replace(" ", "_")
-
-    url = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{q}"
-
     try:
 
-        r = requests.get(
-            url,
-            timeout=5,
-            headers={
-                "User-Agent": "LunaBot/1.0"
-            }
-        )
+        # 🔍 1. SEARCH
+        search_url = "https://uk.wikipedia.org/w/api.php"
 
-        # fallback
-        if r.status_code != 200:
+        search_params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": q,
+            "format": "json"
+        }
 
-            q2 = query.strip().replace(" ", "_")
-
-            url2 = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{q2}"
-
-            r = requests.get(
-                url2,
-                timeout=5,
-                headers={
-                    "User-Agent": "LunaBot/1.0"
-                }
-            )
-
-            if r.status_code != 200:
-
-                print("WIKI ERROR:", r.status_code)
-
-                return None
+        r = requests.get(search_url, params=search_params, timeout=5)
 
         data = r.json()
 
-        text = data.get("extract")
+        results = data.get("query", {}).get("search", [])
+
+        if not results:
+            print("WIKI: нічого не знайдено")
+            return None
+
+        title = results[0]["title"]
+
+        print("WIKI TITLE:", title)
+
+        # 📄 2. SUMMARY
+        summary_url = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{title}"
+
+        r2 = requests.get(summary_url, timeout=5)
+
+        if r2.status_code != 200:
+            print("WIKI SUMMARY ERROR:", r2.status_code)
+            return None
+
+        data2 = r2.json()
+
+        text = data2.get("extract")
 
         if not text:
             return None
 
-        if len(text) > 300:
-            text = text[:300].rsplit(".", 1)[0] + "..."
+        # ✂️ скорочення
+        if len(text) > 400:
+            text = text[:400].rsplit(".", 1)[0] + "..."
 
         return text
 
     except Exception as e:
-
-        print("WIKI EXCEPTION:", e)
-
+        print("WIKI ERROR:", e)
         return None

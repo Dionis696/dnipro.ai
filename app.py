@@ -1,51 +1,57 @@
-ЩО ТЕПЕР РОБИТЬ app.py
-1. 🧠 Отримує повідомлення з Second Life
+from flask import Flask, request, Response
+import json
+import os
 
-LSL шле:
+from luna_brain import luna
 
-{ "user": "Dzoker007", "message": "луна як справи" }
+app = Flask(__name__)
 
-👉 Flask приймає це тут:
 
-data = request.json
-2. 🚀 Передає в мозок
-reply = luna.reply(user, message)
+@app.route("/")
+def home():
+    return "Luna ONLINE 😏"
 
-👉 тут працює:
 
-wiki
-gemini
-memory
-3. 🛑 ФІЛЬТР ПІНГУ (ДУЖЕ ВАЖЛИВО)
-if reply == "":
-    return Response("", status=204)
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.json or {}
 
-👉 це означає:
+    user = data.get("user", "unknown")
+    message = data.get("message", "")
 
-якщо:
-ping
-або Луна мовчить
-👉 сервер НЕ шле JSON
+    reply = ""
 
-💥 це дає:
+    try:
+        # 🧠 Передаємо запит у головний мозок Луни
+        reply = luna.reply(user, message)
 
-менше трафіку
-швидше відповідь
-менше лагів у Second Life
-4. 💬 Якщо є відповідь
-{"reply": "Dzoker007 😏 все добре"}
+        # ❗ Захист від None
+        if not reply:
+            reply = ""
 
-👉 LSL читає і каже в чат
+    except Exception as e:
+        print("Luna ERROR:", e)
+        reply = ""
 
-⚠️ ВАЖЛИВА ШТУКА (ДУЖЕ)
-Якщо бачиш:
+    # =========================
+    # 🛑 ОПТИМІЗАЦІЯ ПІНГУ
+    # =========================
+    if reply == "":
+        return Response("", status=204)
 
-"Пользователь не в сети"
+    # =========================
+    # 💬 НОРМАЛЬНА ВІДПОВІДЬ
+    # =========================
+    return Response(
+        json.dumps({"reply": reply}, ensure_ascii=False),
+        content_type="application/json; charset=utf-8"
+    )
 
-👉 це НЕ Python проблема
 
-👉 це означає:
+if __name__ == "__main__":
+    print("🔥 Luna ONLINE")
 
-об’єкт у SL не може говорити
-або ти не поруч
-або лаг
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000))
+    )

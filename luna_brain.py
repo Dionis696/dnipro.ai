@@ -151,7 +151,7 @@ class LunaBrain:
                 wiki = get_wiki_answer(msg)
 
                 if wiki:
-                    print(f"🌍 [WIKI] Відповідь для {user}: {wiki}")
+                    print(f"🌍 [WIKI] Відповідь для {user}: {wiki}", flush=True)
 
                     last_wiki_time = now
 
@@ -172,7 +172,7 @@ class LunaBrain:
         # 🤖 GEMINI
         # =========================
 
-        print(f"📡 [GEMINI] Запит від {clean_username(user)}: '{msg}'")
+        print(f"📡 [GEMINI] Запит від {clean_username(user)}: '{msg}'", flush=True)
 
         response = ask_gemini(clean_username(user), msg)
 
@@ -181,7 +181,7 @@ class LunaBrain:
         # =========================
 
         if not response:
-            print("⚠️ [FALLBACK] Gemini не відповів → беремо памʼять")
+            print("⚠️ [FALLBACK] Gemini не відповів → беремо памʼять", flush=True)
 
             memory = get_related_memory(msg) or get_random_memory()
 
@@ -195,14 +195,14 @@ class LunaBrain:
                 response = "щось сьогодні зв'язок плаває 😏"
 
         else:
-            print(f"✅ [GEMINI OK] {response}")
+            print(f"✅ [GEMINI OK] {response}", flush=True)
 
         # =========================
         # 🧹 АНТИ-ПОВТОР
         # =========================
 
         if msg_l in response.lower() or response.lower() in msg_l:
-            print("⚠️ [ANTI-REPEAT] Спіймано повтор → заміна")
+            print("⚠️ [ANTI-REPEAT] Спіймано повтор → заміна", flush=True)
 
             memory = get_random_memory()
             if memory:

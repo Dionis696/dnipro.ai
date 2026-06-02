@@ -1,8 +1,9 @@
 from flask import Flask, request, Response
 import json
 import os
+import time
 
-from luna_brain import luna
+from luna_brain import luna, check_idle
 
 app = Flask(__name__)
 
@@ -18,6 +19,14 @@ def chat():
 
     user = data.get("user", "unknown")
     message = data.get("message", "")
+
+    # 1. ПЕРЕВІРКА НА ІДЛ (якщо чат мовчить більше 10 хв)
+    idle_reply = check_idle()
+    if idle_reply:
+        return Response(
+            json.dumps({"reply": idle_reply}, ensure_ascii=False),
+            content_type="application/json; charset=utf-8"
+        )
 
     reply = ""
 

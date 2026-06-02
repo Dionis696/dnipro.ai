@@ -1,24 +1,24 @@
 import os
 import requests
 
-# 🔑 ВСТАВ СВІЙ СЕКРЕТНИЙ КЛЮЧ СЮДИ ВСЕРЕДИНУ ЛАПОК:
-GEMINI_API_KEY = "AQ.Ab8RN6INEobcvAHmoE6KTR0PT8-ZY3CRXNXDEyFNvLsAcUDlFg"
+# 🔑 Твій секретний ключ від Google Gemini (залишай у лапках):
+GEMINI_API_KEY = "AQ.A...DlFg"  # <-- Переконайся, що тут твій повний робочий ключ
 
 def ask_gemini(user_name, user_message):
-    # 🎯 ДІАГНОСТИКА 1: Перевірка самого виклику функції (з примусовим виводом flush=True)
+    # 🎯 ДІАГНОСТИКА 1: Перевірка самого виклику функції
     print(f"🚀 [LUNA_AI] Функція ask_gemini УСПІШНО ВИКЛИКАНА для користувача: '{user_name}'", flush=True)
     print(f"💬 [LUNA_AI] Вхідний текст: '{user_message}'", flush=True)
 
     # 🎯 ДІАГНОСТИКА 2: Перевірка ключа всередині коду
     if not GEMINI_API_KEY or "ВСТАВ_СЮДИ" in GEMINI_API_KEY:
-        print("❌ [LUNA_AI] ПОМИЛКА: Ти забув замінити текст на свій реальний ключ у коді luna_ai.py!", flush=True)
+        print("❌ [LUNA_AI] ПОМИЛКА: Ключ порожній або не замінений у коді luna_ai.py!", flush=True)
         return None
     else:
         masked_key = f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if len(GEMINI_API_KEY) > 8 else "ЗАКОРОТКИЙ_КЛЮЧ"
         print(f"🔑 [LUNA_AI] Ключ зчитано прямо з коду файлу: {masked_key}", flush=True)
 
-    # Використовуємо швидку, стабільну модель gemini-1.5-flash
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # 🔥 ОНОВЛЕНИЙ URL: Переведено на стабільну гілку /v1/ для усунення помилки 404
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     # 🎭 Характер Луни
     system_instruction = (
@@ -46,7 +46,7 @@ def ask_gemini(user_name, user_message):
     }
 
     try:
-        print("📡 [LUNA_AI] Надсилаю POST-запит до Google Gemini API...", flush=True)
+        print("📡 [LUNA_AI] Надсилаю POST-запит до актуального Google Gemini API (v1)...", flush=True)
         
         # Надсилаємо POST запит з таймаутом 7 секунд
         r = requests.post(url, json=data, timeout=7)

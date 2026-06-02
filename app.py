@@ -2,7 +2,7 @@ from flask import Flask, request, Response
 import json
 import os
 
-from luna_brain import luna, check_idle
+from luna_brain import luna
 
 app = Flask(__name__)
 
@@ -20,12 +20,13 @@ def chat():
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
+    reply = ""
+
     try:
+        # 🔥 максимально швидка відповідь
         reply = luna.reply(user, message)
 
-        if not reply:
-            reply = check_idle()
-
+        # ❗ не даємо None
         if not reply:
             reply = ""
 

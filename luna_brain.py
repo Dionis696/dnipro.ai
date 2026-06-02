@@ -169,7 +169,7 @@ class LunaBrain:
             return ""
 
         # =========================
-        # 🤖 GROQ API
+        # 🤖 GROQ API (Оновлено назву для логів)
         # =========================
 
         print(f"📡 [GROQ] Запит від {clean_username(user)}: '{msg}'", flush=True)

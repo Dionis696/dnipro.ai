@@ -18,6 +18,20 @@ session_until = 0
 
 last_activity_time = time.time()
 
+# 🔥 Список користувачів, яких Луна вже бачила (очищується при перезапуску)
+seen_users = set()
+
+def check_new_user(user):
+    clean_name = clean_username(user)
+    if clean_name not in seen_users:
+        seen_users.add(clean_name)
+        return random.choice([
+            f"О, привіт, {clean_name}! Рада бачити в Dnipro Club 😏🔥",
+            f"Хто це до нас завітав? Привіт, {clean_name}! 👋🎧",
+            f"Привіт, {clean_name}! Розташовуйся, сьогодні буде спекотно 🔥😎",
+            f"Оу, нове обличчя! Вітаю, {clean_name}! 😏✨"
+        ])
+    return None
 
 # =========================
 # 👤 USER

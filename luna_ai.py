@@ -2,7 +2,7 @@ import os
 import requests
 
 # 🔑 Твій секретний ключ від Google Gemini (залишай у лапках):
-GEMINI_API_KEY = "AQ.Ab8RN6INEobcvAHmoE6KTR0PT8-ZY3CRXNXDEyFNvLsAcUDlFg"  # <-- Переконайся, що тут твій повний робочий ключ
+GEMINI_API_KEY = "AQ.A...DlFg"  # <-- ОБОВ'ЯЗКОВО переконайся, що тут твій ПОВНИЙ ключ
 
 def ask_gemini(user_name, user_message):
     # 🎯 ДІАГНОСТИКА 1: Перевірка самого виклику функції
@@ -17,11 +17,11 @@ def ask_gemini(user_name, user_message):
         masked_key = f"{GEMINI_API_KEY[:4]}...{GEMINI_API_KEY[-4:]}" if len(GEMINI_API_KEY) > 8 else "ЗАКОРОТКИЙ_КЛЮЧ"
         print(f"🔑 [LUNA_AI] Ключ зчитано прямо з коду файлу: {masked_key}", flush=True)
 
-    # 🔥 ОНОВЛЕНИЙ URL: Переведено на стабільну гілку /v1/ для усунення помилки 404
+    # Стабільний URL Google API v1
     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     # 🎭 Характер Луни
-    system_instruction = (
+    system_prompt = (
         "Ти — Луна, зухвала, розумна та неймовірно харизматична тусовщиця нічного клубу 'Dnipro Club' у Second Life. "
         "Ти обожнюєш електронну музику, нічний вайб, глибокі баси та гучні вечірки. "
         "Твої відповіді обов'язково мають бути короткими (максимум 1-2 речення), бо ти пишеш в ігровий чат, де люди не читають довгі тексти. "
@@ -29,16 +29,17 @@ def ask_gemini(user_name, user_message):
         "Звертайся до людей дружньо або з легкою іронією. Не поводься як робот-асистент чи ШІ, ти — живий гість клубу."
     )
 
+    # 🛠️ ФІКС JSON: Формат відповідно до офіційного стандарту Google Gemini v1 API
     data = {
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}]
-        },
         "contents": [
             {
                 "role": "user",
                 "parts": [{"text": f"Користувач {user_name} каже тобі: {user_message}"}]
             }
         ],
+        "system_instruction": {
+            "parts": [{"text": system_prompt}]
+        },
         "generationConfig": {
             "temperature": 0.85,
             "maxOutputTokens": 120
@@ -46,7 +47,7 @@ def ask_gemini(user_name, user_message):
     }
 
     try:
-        print("📡 [LUNA_AI] Надсилаю POST-запит до актуального Google Gemini API (v1)...", flush=True)
+        print("📡 [LUNA_AI] Надсилаю виправлений POST-запит до Google Gemini API (v1)...", flush=True)
         
         # Надсилаємо POST запит з таймаутом 7 секунд
         r = requests.post(url, json=data, timeout=7)

@@ -2,7 +2,7 @@ import os
 import requests
 
 # 🔑 Твій секретний ключ від Google Gemini (залишай у лапках):
-GEMINI_API_KEY = "AQ.A...DlFg"  # <-- Переконайся, що тут твій повний робочий ключ
+GEMINI_API_KEY = "AQ.Ab8RN6INEobcvAHmoE6KTR0PT8-ZY3CRXNXDEyFNvLsAcUDlFg"  # <-- Переконайся, що тут твій повний робочий ключ
 
 def ask_gemini(user_name, user_message):
     # 🎯 ДІАГНОСТИКА 1: Перевірка самого виклику функції

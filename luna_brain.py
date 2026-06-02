@@ -1,48 +1,22 @@
 import random
-import re
 import time
 
 from luna_memory import learn_from_chat, get_random_memory, get_related_memory
-from luna_time import get_time_message
 from luna_wiki import get_wiki_answer, should_use_wiki
+from luna_ai import ask_gemini
 
 
 # =========================
 # 🔥 GLOBAL
 # =========================
 
-last_live_time = 0
-next_live_delay = random.randint(180, 360)
-chat_activity = 0
-
-last_time_message = 0
-TIME_COOLDOWN = 1800
-
 last_wiki_time = 0
-WIKI_COOLDOWN = 5  # 🔥 швидше реагує
+WIKI_COOLDOWN = 5
 
 active_session_user = None
 session_until = 0
 
-stop_until = 0
 last_activity_time = time.time()
-
-
-# =========================
-# 🎧 PARTY
-# =========================
-
-party_lines = [
-    "🎧 IN THE MIX 🔥",
-    "Dnipro Club на зв’язку 😎",
-    "музику гучніше 🎧🔥",
-    "танцпол горить 💃",
-    "бас качає сьогодні 🔥",
-    "ніч тільки починається 😎",
-    "DJ тримає хвилю 🎧",
-    "танцюємо далі 💃",
-    "клуб живе музикою 😏"
-]
 
 
 # =========================
@@ -74,20 +48,6 @@ def session_tick():
     global active_session_user, session_until
     if time.time() > session_until:
         active_session_user = None
-        session_until = 0
-
-
-# =========================
-# 🔴 STOP
-# =========================
-
-def trigger_stop():
-    global stop_until
-    stop_until = time.time() + 600
-
-
-def can_talk():
-    return time.time() >= stop_until
 
 
 # =========================
@@ -104,39 +64,17 @@ def update_activity():
 # =========================
 
 def check_idle():
-
     global last_activity_time
 
     if time.time() - last_activity_time > 600:
-
         update_activity()
 
         return random.choice([
             "хтось ще не спить? 👀",
-            "ніч сьогодні дивна 😏",
-            "музика ще жива 🎧",
+            "ніч сьогодні жива 😏",
+            "бас ще качає 🎧",
             "Dnipro Club не спить 🔥"
         ])
-
-    return None
-
-
-# =========================
-# 😂 REACTIONS
-# =========================
-
-def reaction_reply(msg):
-
-    text = msg.lower()
-
-    reactions = {
-        "привіт": ["привіт 😏", "о привіт 👀"],
-        "привет": ["привет 😏", "о привет 👀"]
-    }
-
-    for key in reactions:
-        if key in text:
-            return random.choice(reactions[key])
 
     return None
 
@@ -160,39 +98,40 @@ class LunaBrain:
 
     def reply(self, user, msg):
 
-        global last_live_time, next_live_delay, chat_activity
-        global last_time_message, last_wiki_time
+        global last_wiki_time
 
         msg_l = msg.lower().strip()
         now = time.time()
 
-        # ❗ не обробляємо пусті системні повідомлення
-        if not msg_l:
+        # =========================
+        # 🛑 ТИХИЙ ПІНГ
+        # =========================
+        if not msg_l or msg_l == "ping" or user == "system":
+            update_activity()
             return ""
-
-        chat_activity += 1
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
         # =========================
-        # 🧠 SAFE LEARN
+        # 🧠 USER MEMORY
         # =========================
 
-        learn_from_chat(user, msg)
+        if user not in self.user_topics:
+            self.user_topics[user] = []
+
+        self.user_topics[user].append(msg)
+
+        if len(self.user_topics[user]) > 10:
+            self.user_topics[user].pop(0)
+
+        # =========================
+        # 🧠 LEARN
+        # =========================
+
+        if 4 < len(msg) < 180:
+            learn_from_chat(user, msg)
 
         session_tick()
-
-        # =========================
-        # 🔴 STOP
-        # =========================
-
-        if msg_l in ["stop", "луна стоп"]:
-            trigger_stop()
-            update_activity()
-            return "окей… мовчу 😌"
-
-        if not can_talk():
-            return ""
 
         # =========================
         # 🟢 SESSION
@@ -202,38 +141,16 @@ class LunaBrain:
             open_session(user)
 
         # =========================
-        # 💬 SIMPLE DIALOG
+        # 🌍 WIKI (ПРІОРИТЕТ)
         # =========================
 
-        if is_direct:
-
-            if any(x in msg_l for x in ["як поживаєш","як справи","як ти"]):
-                return "у мене все добре 😏"
-
-            if "шо нового" in msg_l or "що нового" in msg_l:
-                return "та нічого особливого 😏"
-
-            if "який зараз час" in msg_l:
-                tm = time.localtime()
-                return f"Зараз {tm.tm_hour:02d}:{tm.tm_min:02d} 😏"
-
-        # =========================
-        # 🌍 WIKI (ГОЛОВНЕ)
-        # =========================
-
-        if (
-            should_use_wiki(msg)
-            or "що таке" in msg_l
-            or "шо таке" in msg_l
-            or "хто такий" in msg_l
-        ):
+        if should_use_wiki(msg):
 
             if now - last_wiki_time > WIKI_COOLDOWN:
 
                 wiki = get_wiki_answer(msg)
 
                 if wiki:
-
                     last_wiki_time = now
 
                     final = f"{clean_username(user)} 😏 {wiki}"
@@ -243,48 +160,43 @@ class LunaBrain:
                     return final
 
         # =========================
-        # ❗ НЕ ВІДПОВІДАЄМО СМІТТЯМ НА ПИТАННЯ
+        # 🤫 НЕ ЛІЗТИ В ЧУЖИЙ ЧАТ
         # =========================
 
-        if "?" in msg and not should_use_wiki(msg):
+        if not is_direct and not in_session(user):
             return ""
 
         # =========================
-        # 🧠 MEMORY
+        # 🤖 GEMINI
         # =========================
 
-        memory = get_related_memory(msg)
+        response = ask_gemini(clean_username(user), msg)
 
-        # ❌ не беремо копію повідомлення
-        if memory and memory.lower() in msg_l:
-            memory = None
+        # =========================
+        # 🧠 FALLBACK
+        # =========================
 
-        if not memory:
+        if not response:
+
+            memory = get_related_memory(msg) or get_random_memory()
+
+            if memory:
+                response = random.choice([
+                    memory,
+                    f"ммм 😏 {memory}",
+                    f"👀 {memory}"
+                ])
+            else:
+                response = "щось сьогодні зв'язок плаває 😏"
+
+        # =========================
+        # 🧹 АНТИ-ПОВТОР (ВАЖЛИВИЙ ФІКС)
+        # =========================
+
+        if msg_l in response.lower() or response.lower() in msg_l:
             memory = get_random_memory()
-
-        if memory:
-
-            if not is_direct and not in_session(user):
-                return ""
-
-            response = random.choice([
-                memory,
-                f"ммм 😏 {memory}",
-                f"цікаво… {memory}",
-                f"👀 {memory}"
-            ])
-
-        else:
-
-            if not is_direct:
-                return ""
-
-            response = random.choice([
-                "я думаю над цим 😏",
-                "цікаве питання 👀",
-                "хмм… дай секунду 😌",
-                "ти змусив мене задуматись 😏"
-            ])
+            if memory:
+                response = memory
 
         final = f"{clean_username(user)} 😏 {response}"
 

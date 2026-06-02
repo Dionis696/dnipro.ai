@@ -6,7 +6,6 @@ import re
 # =========================
 
 WIKI_TRIGGERS = [
-
     # 🇺🇦 ПИТАННЯ
     "що таке","що це","що означає","що значить","в чому суть",
     "як це працює","поясни","поясни мені","розкажи","розкажи про",
@@ -51,17 +50,11 @@ WIKI_TRIGGERS = [
 # =========================
 
 def should_use_wiki(msg):
-
     msg = msg.lower()
-
-    # тригери
     if any(t in msg for t in WIKI_TRIGGERS):
         return True
-
-    # будь-яке нормальне питання
     if "?" in msg and len(msg) > 5:
         return True
-
     return False
 
 
@@ -70,14 +63,10 @@ def should_use_wiki(msg):
 # =========================
 
 def clean_query(text):
-
     text = text.lower()
-
     for t in WIKI_TRIGGERS:
         text = text.replace(t, "")
-
     text = re.sub(r"[^a-zа-яіїєґ0-9 ]", "", text)
-
     return text.strip()
 
 
@@ -86,19 +75,14 @@ def clean_query(text):
 # =========================
 
 def get_wiki_answer(query):
-
     print("WIKI QUERY:", query)
-
     q = clean_query(query)
-
     if not q:
         q = query.lower()
 
     try:
-
         # 🔍 1. SEARCH
         search_url = "https://uk.wikipedia.org/w/api.php"
-
         search_params = {
             "action": "query",
             "list": "search",
@@ -107,9 +91,13 @@ def get_wiki_answer(query):
         }
 
         r = requests.get(search_url, params=search_params, timeout=5)
+        
+        # Перевірка статусу відповіді, щоб уникнути помилок парсингу
+        if r.status_code != 200:
+            print("WIKI SEARCH ERROR: status", r.status_code)
+            return None
 
         data = r.json()
-
         results = data.get("query", {}).get("search", [])
 
         if not results:
@@ -117,20 +105,18 @@ def get_wiki_answer(query):
             return None
 
         title = results[0]["title"]
-
         print("WIKI TITLE:", title)
 
         # 📄 2. SUMMARY
         summary_url = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{title}"
-
         r2 = requests.get(summary_url, timeout=5)
 
+        # Перевірка статусу відповіді[cite: 3]
         if r2.status_code != 200:
-            print("WIKI SUMMARY ERROR:", r2.status_code)
+            print("WIKI SUMMARY ERROR: status", r2.status_code)
             return None
 
         data2 = r2.json()
-
         text = data2.get("extract")
 
         if not text:

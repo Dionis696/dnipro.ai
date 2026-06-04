@@ -4,7 +4,7 @@ import time
 from luna_memory import learn_from_chat, get_random_memory, get_related_memory, save_fact, get_fact, clear_old_facts
 from luna_wiki import get_wiki_answer, should_use_wiki
 from luna_ai import ask_gemini
-from luna_time import get_time_message
+from luna_time import build_time_phrase
 
 # =========================
 # 🔥 GLOBAL
@@ -78,8 +78,9 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД (Пріоритет - повертаємо результат одразу)
+        # 🧠 ЛОГІКА КОМАНД
         if is_direct:
+            # 1. ЗАПИС ФАКТІВ
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
                     fact = msg.split("діджей")[-1].strip(" ,.:-")
@@ -88,7 +89,7 @@ class LunaBrain:
                     fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
-            # ЧИТАННЯ (Якщо є факт - повертаємо його без звернення до AI)
+            # 2. ЧИТАННЯ ФАКТІВ
             if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
                 return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
@@ -96,6 +97,10 @@ class LunaBrain:
             if any(q in msg_l for q in ["дай рекламу", "покажи рекламу", "яка реклама"]):
                 fact = get_fact("реклама")
                 return f"{clean_name} 😏 Ось актуальне: {fact} ✨" if fact else f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
+            
+            # 3. ЧАС (НОВА КОМАНДА)
+            if any(q in msg_l for q in ["котра година", "який час", "скільки часу", "яка зараз година"]):
+                return f"{clean_name} 😏 {build_time_phrase()}"
 
         # Навчання (загальне)
         if user not in self.user_topics: self.user_topics[user] = []
@@ -117,9 +122,8 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API (Відповіді на звичайні повідомлення)
+        # 🤖 GROQ API
         if is_direct or in_session(user):
-            # Контекст передається тільки для розмови, якщо це не пряма команда
             dj_fact = get_fact("діджей")
             context = f"Пам'ятай, що сьогодні діджей: {dj_fact}. " if dj_fact else ""
             

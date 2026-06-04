@@ -78,7 +78,7 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД
+        # 🧠 ЛОГІКА КОМАНД (Пріоритет - повертаємо результат одразу)
         if is_direct:
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
@@ -88,6 +88,7 @@ class LunaBrain:
                     fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
+            # ЧИТАННЯ (Якщо є факт - повертаємо його без звернення до AI)
             if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
                 return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
@@ -96,7 +97,7 @@ class LunaBrain:
                 fact = get_fact("реклама")
                 return f"{clean_name} 😏 Ось актуальне: {fact} ✨" if fact else f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
 
-        # Навчання
+        # Навчання (загальне)
         if user not in self.user_topics: self.user_topics[user] = []
         self.user_topics[user].append(msg)
         if len(self.user_topics[user]) > 10: self.user_topics[user].pop(0)
@@ -116,10 +117,11 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API з КОНТЕКСТОМ
+        # 🤖 GROQ API (Відповіді на звичайні повідомлення)
         if is_direct or in_session(user):
+            # Контекст передається тільки для розмови, якщо це не пряма команда
             dj_fact = get_fact("діджей")
-            context = f"Сьогодні діджей: {dj_fact}. " if dj_fact else ""
+            context = f"Пам'ятай, що сьогодні діджей: {dj_fact}. " if dj_fact else ""
             
             response = ask_gemini(clean_name, f"{context} Користувач питає: {msg}")
             

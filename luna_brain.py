@@ -1,10 +1,13 @@
 import random
 import time
+from datetime import datetime
+import pytz
 
 from luna_memory import learn_from_chat, get_random_memory, get_related_memory, save_fact, get_fact, clear_old_facts
 from luna_wiki import get_wiki_answer, should_use_wiki
 from luna_ai import ask_gemini
-from luna_time import build_time_phrase
+# Імпортуємо build_time_phrase, якщо знадобиться для інших речей, 
+# але для точного часу зробимо окрему логіку.
 
 # =========================
 # 🔥 GLOBAL
@@ -80,13 +83,13 @@ class LunaBrain:
 
         # 🧠 ЛОГІКА КОМАНД (Пріоритет - найвищий)
         
-        # 1. ЧАС (Відповідь миттєво, без AI)
+        # 1. ЧАС (Точна відповідь без AI)
         if any(q in msg_l for q in ["котра година", "який час", "скільки часу", "яка зараз година", "який зараз час"]):
-            return f"{clean_name} 😏 {build_time_phrase()}"
+            kyiv_time = datetime.now(pytz.timezone("Europe/Kyiv")).strftime("%H:%M")
+            return f"{clean_name} 😏 Зараз рівно {kyiv_time}. Готова запалювати? 🔥"
 
         # 2. ФАКТИ ТА КОМАНДИ
         if is_direct:
-            # Запис
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
                     fact = msg.split("діджей")[-1].strip(" ,.:-")
@@ -95,7 +98,6 @@ class LunaBrain:
                     fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
-            # Читання
             if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
                 return f"{clean_name} 😏 Сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"

@@ -11,16 +11,15 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    # Отримуємо дані з запиту
-    data = request.json or {}
+    # Отримуємо дані з запиту з перевіркою
+    data = request.get_json(silent=True) or {}
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
     # 1. СПОЧАТКУ намагаємось отримати відповідь від мозку Луни
-    # Якщо мозок видає змістовну відповідь, ми її повертаємо і не йдемо далі
     try:
         reply = luna.reply(user, message)
-        if reply and reply.strip() != "":
+        if reply and isinstance(reply, str) and reply.strip() != "":
             return Response(
                 json.dumps({"reply": reply}, ensure_ascii=False),
                 content_type="application/json; charset=utf-8"
@@ -28,28 +27,35 @@ def chat():
     except Exception as e:
         print(f"Luna BRAIN ERROR: {e}")
 
-    # 2. ЯКЩО мозок нічого не відповів, перевіряємо, чи це новий користувач
-    welcome_msg = check_new_user(user)
-    if welcome_msg:
-        return Response(
-            json.dumps({"reply": welcome_msg}, ensure_ascii=False),
-            content_type="application/json; charset=utf-8"
-        )
+    # 2. Якщо мозок мовчить — перевіряємо, чи це новий користувач
+    try:
+        welcome_msg = check_new_user(user)
+        if welcome_msg and isinstance(welcome_msg, str):
+            return Response(
+                json.dumps({"reply": welcome_msg}, ensure_ascii=False),
+                content_type="application/json; charset=utf-8"
+            )
+    except Exception as e:
+        print(f"Welcome Check ERROR: {e}")
 
-    # 3. ЯКЩО нових немає, перевіряємо, чи не час для повідомлення IDLE
-    idle_reply = check_idle()
-    if idle_reply:
-        return Response(
-            json.dumps({"reply": idle_reply}, ensure_ascii=False),
-            content_type="application/json; charset=utf-8"
-        )
+    # 3. Якщо нових немає, перевіряємо IDLE
+    try:
+        idle_reply = check_idle()
+        if idle_reply and isinstance(idle_reply, str):
+            return Response(
+                json.dumps({"reply": idle_reply}, ensure_ascii=False),
+                content_type="application/json; charset=utf-8"
+            )
+    except Exception as e:
+        print(f"Idle Check ERROR: {e}")
 
-    # 4. Якщо нічого не підійшло, просто повертаємо 204 (тиша)
+    # 4. Якщо нічого не підійшло — тиша (204 No Content)
     return Response("", status=204)
 
 if __name__ == "__main__":
-    print("🔥 Luna ONLINE - Система запущена та виправлена")
+    port = int(os.environ.get("PORT", 10000))
+    print(f"🔥 Luna ONLINE - Система запущена на порті {port}")
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000))
+        port=port
     )

@@ -1,22 +1,18 @@
 from flask import Flask, request, Response
 import json
 import os
-import time
-
 from luna_brain import luna, check_idle, check_new_user
 
 app = Flask(__name__)
-
 
 @app.route("/")
 def home():
     return "Luna ONLINE 😏"
 
-
 @app.route("/chat", methods=["POST"])
 def chat():
+    # Отримуємо дані з запиту
     data = request.json or {}
-
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
@@ -36,38 +32,27 @@ def chat():
             content_type="application/json; charset=utf-8"
         )
 
+    # 3. ОТРИМАННЯ ВІДПОВІДІ ВІД МОЗКУ ЛУНИ
     reply = ""
-
     try:
-        # 🧠 Передаємо запит у головний мозок Луни
         reply = luna.reply(user, message)
-
-        # ❗ Захист від None
-        if not reply:
-            reply = ""
-
     except Exception as e:
-        print("Luna ERROR:", e)
+        print(f"Luna CRITICAL ERROR: {e}")
         reply = ""
 
-    # =========================
-    # 🛑 ОПТИМІЗАЦІЯ ПІНГУ
-    # =========================
-    if reply == "":
+    # 4. ОПТИМІЗАЦІЯ (Якщо немає відповіді, статус 204)
+    if not reply or reply.strip() == "":
         return Response("", status=204)
 
-    # =========================
-    # 💬 НОРМАЛЬНА ВІДПОВІДЬ
-    # =========================
+    # 5. ВІДПРАВКА ВІДПОВІДІ
     return Response(
         json.dumps({"reply": reply}, ensure_ascii=False),
         content_type="application/json; charset=utf-8"
     )
 
-
 if __name__ == "__main__":
-    print("🔥 Luna ONLINE")
-
+    print("🔥 Luna ONLINE - Система запущена")
+    # Порт для Render або локальний за замовчуванням
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 10000))

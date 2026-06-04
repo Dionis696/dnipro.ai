@@ -1,4 +1,4 @@
-import requestsimport requests
+import requests
 import re
 
 # =========================
@@ -92,7 +92,6 @@ def get_wiki_answer(query):
             "format": "json"
         }
 
-        # Додано headers=HEADERS
         r = requests.get(search_url, params=search_params, headers=HEADERS, timeout=5)
         
         if r.status_code != 200:
@@ -111,8 +110,6 @@ def get_wiki_answer(query):
 
         # 📄 2. SUMMARY
         summary_url = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{title}"
-        
-        # Додано headers=HEADERS
         r2 = requests.get(summary_url, headers=HEADERS, timeout=5)
 
         if r2.status_code != 200:

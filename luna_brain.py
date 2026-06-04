@@ -9,15 +9,11 @@ from luna_time import get_time_message
 # =========================
 # 🔥 GLOBAL
 # =========================
-
 last_wiki_time = 0
-WIKI_COOLDOWN = 5
-
+WIKI_COOLDOWN = 10 # Збільшено кулдаун, щоб не спамити Вікіпедією
 active_session_user = None
 session_until = 0
-
 last_activity_time = time.time()
-
 seen_users = set()
 
 def check_new_user(user):
@@ -91,10 +87,9 @@ class LunaBrain:
             update_activity()
             return ""
 
-        time_msg = get_time_message()
-        if time_msg:
-            return f"{clean_name} 😏 {time_msg}"
-
+        # Видалено автоматичне повідомлення про час при кожному запиті, 
+        # тепер воно не буде перебивати відповідь AI
+        
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
         if user not in self.user_topics: self.user_topics[user] = []
@@ -114,31 +109,17 @@ class LunaBrain:
                 if wiki:
                     last_wiki_time = now
                     update_activity()
-                    # Викидаємо нік з вікі-відповіді, щоб не дублювати
-                    final = f"{clean_name} 😏 {wiki}"
-                    self.remember_response(final)
-                    return final
-
-        if not is_direct and not in_session(user):
-            return ""
+                    return f"{clean_name} 😏 {wiki}"
 
         # 🤖 GROQ API
-        response = ask_gemini(clean_name, msg)
+        if is_direct or in_session(user):
+            response = ask_gemini(clean_name, msg)
+            if response:
+                update_activity()
+                self.remember_response(response)
+                return f"{clean_name} 😏 {response}"
 
-        if not response:
-            memory = get_related_memory(msg) or get_random_memory()
-            response = memory or "щось сьогодні зв'язок плаває 😏"
-
-        # 🧹 АНТИ-ПОВТОР (ігноруємо нік при перевірці повтору)
-        if msg_l in response.lower() or response.lower() in msg_l:
-            response = get_random_memory() or "таке буває, розкажи щось ще 😏"
-
-        # ФІНАЛЬНА ЗБІРКА (Нік додається лише тут)
-        final = f"{clean_name} 😏 {response}"
-        update_activity()
-        self.remember_response(final)
-
-        return final
+        return ""
 
 luna = LunaBrain()
 

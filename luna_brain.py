@@ -38,6 +38,18 @@ def update_activity():
     global last_activity_time
     last_activity_time = time.time()
 
+def check_idle():
+    global last_activity_time
+    if time.time() - last_activity_time > 600:
+        update_activity()
+        return random.choice([
+            "хтось ще не спить? 👀",
+            "ніч сьогодні жива 😏",
+            "бас ще качає 🎧",
+            "Dnipro Club не спить 🔥"
+        ])
+    return None
+
 # =========================
 # 🧠 BRAIN
 # =========================
@@ -109,7 +121,6 @@ class LunaBrain:
             dj_fact = get_fact("діджей")
             context = f"Сьогодні діджей: {dj_fact}. " if dj_fact else ""
             
-            # Передаємо факти в промпт нейронці
             response = ask_gemini(clean_name, f"{context} Користувач питає: {msg}")
             
             if response:

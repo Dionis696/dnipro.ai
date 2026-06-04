@@ -1,4 +1,4 @@
-import requests
+import requestsimport requests
 import re
 
 # =========================
@@ -44,6 +44,8 @@ WIKI_TRIGGERS = [
     "explain this","tell me more"
 ]
 
+# Додаємо User-Agent, щоб Вікіпедія нас не блокувала
+HEADERS = {'User-Agent': 'LunaBot/1.0 (ClubDniproClub; contact: admin)'}
 
 # =========================
 # 🔎 SHOULD USE WIKI
@@ -90,9 +92,9 @@ def get_wiki_answer(query):
             "format": "json"
         }
 
-        r = requests.get(search_url, params=search_params, timeout=5)
+        # Додано headers=HEADERS
+        r = requests.get(search_url, params=search_params, headers=HEADERS, timeout=5)
         
-        # Перевірка статусу відповіді, щоб уникнути помилок парсингу
         if r.status_code != 200:
             print("WIKI SEARCH ERROR: status", r.status_code)
             return None
@@ -109,9 +111,10 @@ def get_wiki_answer(query):
 
         # 📄 2. SUMMARY
         summary_url = f"https://uk.wikipedia.org/api/rest_v1/page/summary/{title}"
-        r2 = requests.get(summary_url, timeout=5)
+        
+        # Додано headers=HEADERS
+        r2 = requests.get(summary_url, headers=HEADERS, timeout=5)
 
-        # Перевірка статусу відповіді[cite: 3]
         if r2.status_code != 200:
             print("WIKI SUMMARY ERROR: status", r2.status_code)
             return None

@@ -78,9 +78,15 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД
+        # 🧠 ЛОГІКА КОМАНД (Пріоритет - найвищий)
+        
+        # 1. ЧАС (Відповідь миттєво, без AI)
+        if any(q in msg_l for q in ["котра година", "який час", "скільки часу", "яка зараз година", "який зараз час"]):
+            return f"{clean_name} 😏 {build_time_phrase()}"
+
+        # 2. ФАКТИ ТА КОМАНДИ
         if is_direct:
-            # 1. ЗАПИС ФАКТІВ
+            # Запис
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
                     fact = msg.split("діджей")[-1].strip(" ,.:-")
@@ -89,18 +95,14 @@ class LunaBrain:
                     fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
-            # 2. ЧИТАННЯ ФАКТІВ
+            # Читання
             if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
-                return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
+                return f"{clean_name} 😏 Сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
             
             if any(q in msg_l for q in ["дай рекламу", "покажи рекламу", "яка реклама"]):
                 fact = get_fact("реклама")
                 return f"{clean_name} 😏 Ось актуальне: {fact} ✨" if fact else f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
-            
-            # 3. ЧАС (НОВА КОМАНДА)
-            if any(q in msg_l for q in ["котра година", "який час", "скільки часу", "яка зараз година"]):
-                return f"{clean_name} 😏 {build_time_phrase()}"
 
         # Навчання (загальне)
         if user not in self.user_topics: self.user_topics[user] = []
@@ -122,7 +124,7 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API
+        # 🤖 GROQ API (AI відповіді)
         if is_direct or in_session(user):
             dj_fact = get_fact("діджей")
             context = f"Пам'ятай, що сьогодні діджей: {dj_fact}. " if dj_fact else ""

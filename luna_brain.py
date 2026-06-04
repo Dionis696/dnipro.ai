@@ -38,18 +38,6 @@ def update_activity():
     global last_activity_time
     last_activity_time = time.time()
 
-def check_idle():
-    global last_activity_time
-    if time.time() - last_activity_time > 600:
-        update_activity()
-        return random.choice([
-            "хтось ще не спить? 👀",
-            "ніч сьогодні жива 😏",
-            "бас ще качає 🎧",
-            "Dnipro Club не спить 🔥"
-        ])
-    return None
-
 # =========================
 # 🧠 BRAIN
 # =========================
@@ -70,7 +58,6 @@ class LunaBrain:
         now = time.time()
         clean_name = clean_username(user)
 
-        # Очищення старих фактів (старше 12 год)
         clear_old_facts()
 
         if not msg_l or msg_l == "ping" or user == "system":
@@ -79,9 +66,8 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД (Пріоритет над AI)
+        # 🧠 ЛОГІКА КОМАНД
         if is_direct:
-            # ЗАПИС
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
                     fact = msg.split("діджей")[-1].strip(" ,.:-")
@@ -90,20 +76,15 @@ class LunaBrain:
                     fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
-            # ЧИТАННЯ (Жорсткий пріоритет: якщо факт знайдено - повертаємо тільки його)
             if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
-                if fact:
-                    return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥"
-                return f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
+                return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
             
             if any(q in msg_l for q in ["дай рекламу", "покажи рекламу", "яка реклама"]):
                 fact = get_fact("реклама")
-                if fact:
-                    return f"{clean_name} 😏 Ось актуальне: {fact} ✨"
-                return f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
+                return f"{clean_name} 😏 Ось актуальне: {fact} ✨" if fact else f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
 
-        # Навчання (збір загальної пам'яті)
+        # Навчання
         if user not in self.user_topics: self.user_topics[user] = []
         self.user_topics[user].append(msg)
         if len(self.user_topics[user]) > 10: self.user_topics[user].pop(0)
@@ -123,9 +104,14 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API (Відповіді на все інше)
+        # 🤖 GROQ API з КОНТЕКСТОМ
         if is_direct or in_session(user):
-            response = ask_gemini(clean_name, msg)
+            dj_fact = get_fact("діджей")
+            context = f"Сьогодні діджей: {dj_fact}. " if dj_fact else ""
+            
+            # Передаємо факти в промпт нейронці
+            response = ask_gemini(clean_name, f"{context} Користувач питає: {msg}")
+            
             if response:
                 update_activity()
                 self.remember_response(response)

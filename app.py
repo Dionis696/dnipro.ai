@@ -1,7 +1,7 @@
 from flask import Flask, request, Response
 import json
 import os
-from luna_brain import luna, check_idle, check_new_user
+from luna_brain import luna, check_idle
 
 app = Flask(__name__)
 
@@ -11,12 +11,13 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    # Отримуємо дані з запиту з перевіркою
+    # Отримуємо дані з запиту
     data = request.get_json(silent=True) or {}
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
     # 1. СПОЧАТКУ намагаємось отримати відповідь від мозку Луни
+    # Луна тепер відповідає на все, включаючи грубість, завдяки оновленому промпту
     try:
         reply = luna.reply(user, message)
         if reply and isinstance(reply, str) and reply.strip() != "":
@@ -27,18 +28,7 @@ def chat():
     except Exception as e:
         print(f"Luna BRAIN ERROR: {e}")
 
-    # 2. Якщо мозок мовчить — перевіряємо, чи це новий користувач
-    try:
-        welcome_msg = check_new_user(user)
-        if welcome_msg and isinstance(welcome_msg, str):
-            return Response(
-                json.dumps({"reply": welcome_msg}, ensure_ascii=False),
-                content_type="application/json; charset=utf-8"
-            )
-    except Exception as e:
-        print(f"Welcome Check ERROR: {e}")
-
-    # 3. Якщо нових немає, перевіряємо IDLE
+    # 2. Якщо мозок мовчить — перевіряємо IDLE (для підтримки активності)
     try:
         idle_reply = check_idle()
         if idle_reply and isinstance(idle_reply, str):
@@ -49,7 +39,7 @@ def chat():
     except Exception as e:
         print(f"Idle Check ERROR: {e}")
 
-    # 4. Якщо нічого не підійшло — тиша (204 No Content)
+    # 3. Якщо нічого не підійшло — тиша (204 No Content)
     return Response("", status=204)
 
 if __name__ == "__main__":

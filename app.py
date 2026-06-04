@@ -16,7 +16,19 @@ def chat():
     user = data.get("user", "unknown")
     message = data.get("message", "")
 
-    # 1. ПЕРЕВІРКА НА НОВОГО КОРИСТУВАЧА (Вітання)
+    # 1. СПОЧАТКУ намагаємось отримати відповідь від мозку Луни
+    # Якщо мозок видає змістовну відповідь, ми її повертаємо і не йдемо далі
+    try:
+        reply = luna.reply(user, message)
+        if reply and reply.strip() != "":
+            return Response(
+                json.dumps({"reply": reply}, ensure_ascii=False),
+                content_type="application/json; charset=utf-8"
+            )
+    except Exception as e:
+        print(f"Luna BRAIN ERROR: {e}")
+
+    # 2. ЯКЩО мозок нічого не відповів, перевіряємо, чи це новий користувач
     welcome_msg = check_new_user(user)
     if welcome_msg:
         return Response(
@@ -24,7 +36,7 @@ def chat():
             content_type="application/json; charset=utf-8"
         )
 
-    # 2. ПЕРЕВІРКА НА ІДЛ (якщо чат мовчить більше 10 хв)
+    # 3. ЯКЩО нових немає, перевіряємо, чи не час для повідомлення IDLE
     idle_reply = check_idle()
     if idle_reply:
         return Response(
@@ -32,27 +44,11 @@ def chat():
             content_type="application/json; charset=utf-8"
         )
 
-    # 3. ОТРИМАННЯ ВІДПОВІДІ ВІД МОЗКУ ЛУНИ
-    reply = ""
-    try:
-        reply = luna.reply(user, message)
-    except Exception as e:
-        print(f"Luna CRITICAL ERROR: {e}")
-        reply = ""
-
-    # 4. ОПТИМІЗАЦІЯ (Якщо немає відповіді, статус 204)
-    if not reply or reply.strip() == "":
-        return Response("", status=204)
-
-    # 5. ВІДПРАВКА ВІДПОВІДІ
-    return Response(
-        json.dumps({"reply": reply}, ensure_ascii=False),
-        content_type="application/json; charset=utf-8"
-    )
+    # 4. Якщо нічого не підійшло, просто повертаємо 204 (тиша)
+    return Response("", status=204)
 
 if __name__ == "__main__":
-    print("🔥 Luna ONLINE - Система запущена")
-    # Порт для Render або локальний за замовчуванням
+    print("🔥 Luna ONLINE - Система запущена та виправлена")
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 10000))

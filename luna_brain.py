@@ -10,23 +10,10 @@ from luna_time import get_time_message
 # 🔥 GLOBAL
 # =========================
 last_wiki_time = 0
-WIKI_COOLDOWN = 60 # Збільшено до 60 сек, щоб адмінка частіше говорила сама
+WIKI_COOLDOWN = 60 # Не частіше ніж раз на хвилину
 active_session_user = None
 session_until = 0
 last_activity_time = time.time()
-seen_users = set()
-
-def check_new_user(user):
-    clean_name = clean_username(user)
-    if clean_name not in seen_users:
-        seen_users.add(clean_name)
-        return random.choice([
-            f"О, привіт, {clean_name}! Рада бачити в Dnipro Club 😏🔥",
-            f"Хто це до нас завітав? Привіт, {clean_name}! 👋🎧",
-            f"Привіт, {clean_name}! Розташовуйся, сьогодні буде спекотно 🔥😎",
-            f"Оу, нове обличчя! Вітаю, {clean_name}! 😏✨"
-        ])
-    return None
 
 def clean_username(name):
     bad_words = ["resident", "guest", "user"]
@@ -37,7 +24,7 @@ def clean_username(name):
 def open_session(user):
     global active_session_user, session_until
     active_session_user = user
-    # Змінено на 1 годину (3600 секунд)
+    # 1 година активної пам'яті (контексту)
     session_until = time.time() + 3600
 
 def in_session(user):
@@ -100,7 +87,7 @@ class LunaBrain:
         session_tick()
         if is_direct: open_session(user)
 
-        # 🌍 WIKI (спрацює тільки якщо чітко питають "що таке")
+        # 🌍 WIKI
         if should_use_wiki(msg):
             if now - last_wiki_time > WIKI_COOLDOWN:
                 wiki = get_wiki_answer(msg)
@@ -109,7 +96,7 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API (відповідає, якщо до неї звернулись або триває сесія)
+        # 🤖 GROQ API (Луна відповідає на ВСЕ, включаючи грубість, завдяки системному промпту в luna_ai)
         if is_direct or in_session(user):
             response = ask_gemini(clean_name, msg)
             if response:
@@ -123,4 +110,3 @@ luna = LunaBrain()
 
 def handle_message(user, message):
     return luna.reply(user, message)
-    

@@ -10,7 +10,7 @@ from luna_time import get_time_message
 # 🔥 GLOBAL
 # =========================
 last_wiki_time = 0
-WIKI_COOLDOWN = 10 # Збільшено кулдаун, щоб не спамити Вікіпедією
+WIKI_COOLDOWN = 60 # Збільшено до 60 сек, щоб адмінка частіше говорила сама
 active_session_user = None
 session_until = 0
 last_activity_time = time.time()
@@ -37,7 +37,8 @@ def clean_username(name):
 def open_session(user):
     global active_session_user, session_until
     active_session_user = user
-    session_until = time.time() + 120
+    # Змінено на 1 годину (3600 секунд)
+    session_until = time.time() + 3600
 
 def in_session(user):
     return active_session_user == user and time.time() < session_until
@@ -87,9 +88,6 @@ class LunaBrain:
             update_activity()
             return ""
 
-        # Видалено автоматичне повідомлення про час при кожному запиті, 
-        # тепер воно не буде перебивати відповідь AI
-        
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
         if user not in self.user_topics: self.user_topics[user] = []
@@ -102,7 +100,7 @@ class LunaBrain:
         session_tick()
         if is_direct: open_session(user)
 
-        # 🌍 WIKI
+        # 🌍 WIKI (спрацює тільки якщо чітко питають "що таке")
         if should_use_wiki(msg):
             if now - last_wiki_time > WIKI_COOLDOWN:
                 wiki = get_wiki_answer(msg)
@@ -111,7 +109,7 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API
+        # 🤖 GROQ API (відповідає, якщо до неї звернулись або триває сесія)
         if is_direct or in_session(user):
             response = ask_gemini(clean_name, msg)
             if response:
@@ -125,3 +123,4 @@ luna = LunaBrain()
 
 def handle_message(user, message):
     return luna.reply(user, message)
+    

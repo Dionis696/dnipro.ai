@@ -70,7 +70,7 @@ class LunaBrain:
         now = time.time()
         clean_name = clean_username(user)
 
-        # Автоматичне чищення старих фактів при кожному повідомленні
+        # Очищення старих фактів (старше 12 год)
         clear_old_facts()
 
         if not msg_l or msg_l == "ping" or user == "system":
@@ -79,27 +79,31 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД (ЗАПАМ'ЯТАЙ / ПЕРЕГЛЯД)
+        # 🧠 ЛОГІКА КОМАНД (Пріоритет над AI)
         if is_direct:
             # ЗАПИС
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
-                    fact = msg.split("діджей")[-1].strip(" ,.:")
+                    fact = msg.split("діджей")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('діджей', fact)}"
                 if "рекламу" in msg_l:
-                    fact = msg.split("рекламу")[-1].strip(" ,.:")
+                    fact = msg.split("рекламу")[-1].strip(" ,.:-")
                     return f"{clean_name} 😏 {save_fact('реклама', fact)}"
             
-            # ЧИТАННЯ
-            if "хто діджей" in msg_l or "який діджей" in msg_l:
+            # ЧИТАННЯ (Жорсткий пріоритет: якщо факт знайдено - повертаємо тільки його)
+            if any(q in msg_l for q in ["хто діджей", "який діджей", "діджей сьогодні"]):
                 fact = get_fact("діджей")
-                return f"{clean_name} 😏 Сьогодні за пультом {fact} 🔥" if fact else f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
+                if fact:
+                    return f"{clean_name} 😏 За моїми даними, сьогодні за пультом {fact} 🔥"
+                return f"{clean_name} 😏 Я ще не знаю, хто сьогодні діджей 🎧"
             
-            if "дай рекламу" in msg_l or "покажи рекламу" in msg_l:
+            if any(q in msg_l for q in ["дай рекламу", "покажи рекламу", "яка реклама"]):
                 fact = get_fact("реклама")
-                return f"{clean_name} 😏 Ось актуальне: {fact} ✨" if fact else f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
+                if fact:
+                    return f"{clean_name} 😏 Ось актуальне: {fact} ✨"
+                return f"{clean_name} 😏 Поки що немає свіжої реклами ✨"
 
-        # Звичайна логіка
+        # Навчання (збір загальної пам'яті)
         if user not in self.user_topics: self.user_topics[user] = []
         self.user_topics[user].append(msg)
         if len(self.user_topics[user]) > 10: self.user_topics[user].pop(0)
@@ -119,7 +123,7 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API
+        # 🤖 GROQ API (Відповіді на все інше)
         if is_direct or in_session(user):
             response = ask_gemini(clean_name, msg)
             if response:

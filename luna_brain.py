@@ -27,9 +27,11 @@ def clean_username(name):
 def open_session(user):
     global active_session_user, session_until
     active_session_user = user
-    session_until = time.time() + 3600
+    # ⏱️ ВСТАНОВЛЕНО 180 СЕКУНД (3 хвилини)
+    session_until = time.time() + 180 
 
 def in_session(user):
+    # Додаємо перевірку часу, щоб бот не відповідав після 3 хвилин мовчання
     return active_session_user == user and time.time() < session_until
 
 def session_tick():
@@ -132,18 +134,19 @@ class LunaBrain:
                     return f"{clean_name} 😏 {wiki}"
 
         # 🤖 GROQ API (AI відповіді)
+        # Тепер відповідає тільки якщо пряме звернення АБО сесія активна (3 хв)
         if is_direct or in_session(user):
+            update_activity() # Оновлюємо активність, щоб подовжити сесію
+            
             dj_fact = get_fact("діджей")
             context = f"Пам'ятай, що сьогодні діджей: {dj_fact}. " if dj_fact else ""
             
             response = ask_gemini(clean_name, f"{context} Користувач питає: {msg}")
             
             if response:
-                update_activity()
                 self.remember_response(response)
                 return f"{clean_name} 😏 {response}"
             else:
-                # 🛡️ СИСТЕМА ПОРЯТУНКУ: ШІ не відповів, беремо фразу з файлів
                 fallback = pick_response(self.book, self.memory, msg)
                 return f"{clean_name} 😏 {fallback.strip()}"
 

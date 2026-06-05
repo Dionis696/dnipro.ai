@@ -3,11 +3,11 @@ import time
 from datetime import datetime
 import pytz
 
+# Імпортуємо ваш міксер для вибору фраз із файлів
+from luna_mixer import pick_response 
 from luna_memory import learn_from_chat, get_random_memory, get_related_memory, save_fact, get_fact, clear_old_facts
 from luna_wiki import get_wiki_answer, should_use_wiki
 from luna_ai import ask_gemini
-# Імпортуємо build_time_phrase, якщо знадобиться для інших речей, 
-# але для точного часу зробимо окрему логіку.
 
 # =========================
 # 🔥 GLOBAL
@@ -61,6 +61,13 @@ class LunaBrain:
     def __init__(self):
         self.last_responses = []
         self.user_topics = {}
+        # Завантажуємо файли для системи "рятування"
+        try:
+            with open("luna_book_ua.txt", "r", encoding="utf-8") as f: self.book = f.readlines()
+            with open("luna_memory.txt", "r", encoding="utf-8") as f: self.memory = f.readlines()
+        except:
+            self.book = ["Привіт! 😏"]
+            self.memory = ["Я тут. 🔥"]
 
     def remember_response(self, text):
         if not text: return
@@ -81,14 +88,12 @@ class LunaBrain:
 
         is_direct = ("луна" in msg_l or "luna" in msg_l)
 
-        # 🧠 ЛОГІКА КОМАНД (Пріоритет - найвищий)
-        
-        # 1. ЧАС (Точна відповідь без AI)
+        # 🧠 1. ЧАС (Точна відповідь без AI)
         if any(q in msg_l for q in ["котра година", "який час", "скільки часу", "яка зараз година", "який зараз час"]):
             kyiv_time = datetime.now(pytz.timezone("Europe/Kyiv")).strftime("%H:%M")
             return f"{clean_name} 😏 Зараз рівно {kyiv_time}. Готова запалювати? 🔥"
 
-        # 2. ФАКТИ ТА КОМАНДИ
+        # 🧠 2. ФАКТИ ТА КОМАНДИ
         if is_direct:
             if any(cmd in msg_l for cmd in ["запам'ятай", "запиши"]):
                 if "діджей" in msg_l:
@@ -137,6 +142,10 @@ class LunaBrain:
                 update_activity()
                 self.remember_response(response)
                 return f"{clean_name} 😏 {response}"
+            else:
+                # 🛡️ СИСТЕМА ПОРЯТУНКУ: ШІ не відповів, беремо фразу з файлів
+                fallback = pick_response(self.book, self.memory, msg)
+                return f"{clean_name} 😏 {fallback.strip()}"
 
         return ""
 

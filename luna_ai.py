@@ -1,13 +1,14 @@
 import requests
+import os
 
-# Твій ключ від Groq
-GROQ_API_KEY = "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"
+# Беремо ключ із налаштувань сервера (Environment Variables)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 def ask_gemini(user_name, user_message):
-    """
-    Відправляє запит до Groq API та повертає відповідь Луни.
-    Оновлено: виключено ласкаві звернення, посилено контроль фактів.
-    """
+    if not GROQ_API_KEY:
+        print("❌ ПОМИЛКА: GROQ_API_KEY не знайдено в оточенні!")
+        return None
+
     url = "https://api.groq.com/openai/v1/chat/completions"
     
     headers = {
@@ -37,7 +38,7 @@ def ask_gemini(user_name, user_message):
                 "content": f"{user_name} каже: {user_message}"
             }
         ],
-        "temperature": 0.7 # Трохи знизив температуру для більшої точності
+        "temperature": 0.7
     }
     
     try:

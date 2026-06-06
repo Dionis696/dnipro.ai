@@ -14,7 +14,6 @@ from luna_ai import ask_gemini
 # =========================
 last_wiki_time = 0
 WIKI_COOLDOWN = 60 
-# Використовуємо словник для зберігання сесій кожного користувача окремо
 active_sessions = {} 
 last_activity_time = time.time()
 
@@ -26,11 +25,9 @@ def clean_username(name):
 
 def open_session(user):
     global active_sessions
-    # Сесія на 180 секунд (3 хвилини) для конкретного користувача
     active_sessions[user] = time.time() + 180 
 
 def in_session(user):
-    # Перевіряємо, чи є користувач у списку та чи не вийшов час
     if user in active_sessions:
         if time.time() < active_sessions[user]:
             return True
@@ -41,7 +38,6 @@ def in_session(user):
 def session_tick():
     global active_sessions
     now = time.time()
-    # Автоматичне видалення прострочених сесій
     expired = [u for u, t in active_sessions.items() if now > t]
     for u in expired:
         del active_sessions[u]
@@ -49,6 +45,19 @@ def session_tick():
 def update_activity():
     global last_activity_time
     last_activity_time = time.time()
+
+# Функція, яку шукає app.py
+def check_idle():
+    global last_activity_time
+    if time.time() - last_activity_time > 600:
+        update_activity()
+        return random.choice([
+            "хтось ще не спить? 👀",
+            "ніч сьогодні жива 😏",
+            "бас ще качає 🎧",
+            "Dnipro Club не спить 🔥"
+        ])
+    return None
 
 # =========================
 # 🧠 BRAIN
@@ -115,7 +124,6 @@ class LunaBrain:
         if 4 < len(msg) < 180:
             learn_from_chat(user, msg)
 
-        # Оновлення сесій
         session_tick()
         if is_direct: 
             open_session(user)
@@ -129,11 +137,9 @@ class LunaBrain:
                     update_activity()
                     return f"{clean_name} 😏 {wiki}"
 
-        # 🤖 GROQ API (AI відповіді)
-        # Відповідає, якщо звертаються до неї АБО якщо це триває діалог конкретного юзера
+        # 🤖 GROQ API
         if is_direct or in_session(user):
             update_activity() 
-            # Якщо він у сесії, оновлюємо її час (продовжуємо на 3 хв)
             if user in active_sessions:
                 open_session(user)
             

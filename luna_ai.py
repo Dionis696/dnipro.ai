@@ -31,7 +31,7 @@ def ask_gemini(user_name, user_message):
     }
     
     data = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"{user_name} каже: {user_message}"}

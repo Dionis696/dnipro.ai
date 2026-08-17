@@ -45,7 +45,7 @@ def ask_gemini(user_name, user_message):
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"].strip()
         else:
-            print(f"❌ Помилка API (Groq): {response.status_code}", flush=True)
+            print(f"❌ Помилка API (Groq): {response.status_code} - {response.text}", flush=True)
             return None
             
     except Exception as e:

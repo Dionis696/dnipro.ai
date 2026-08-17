@@ -25,8 +25,9 @@ def ask_gemini(user_name, user_message):
         "Content-Type": "application/json"
     }
     
+    # Використовуємо актуальну модель із поточного каталогу Groq
     data = {
-        "model": "llama-3.1-8b-instant",  # <--- Ставимо цю базову модель, яка є на всіх ключах
+        "model": "openai/gpt-oss-20b",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"{user_name} каже: {user_message}"}
